@@ -70,6 +70,7 @@ class OWNConnection():
 
         _commandSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         _commandSocket.connect((self._address, self._port))
+        _error = False
         self._logger.debug("Opened connection socket for command session.")
         self._write("*99*0##", _commandSocket)
 
@@ -80,33 +81,37 @@ class OWNConnection():
 
         result = OWNSignaling(self._read(_commandSocket))
         if result.isNACK():
+            _error = True
             self._logger.error("Error while establishing command connection")
         elif result.isSHA():
+            _error = True
             self._logger.error("Error while establishing command session: HMAC authentication not supported")
         elif result.isNonce():
             hashedPass = "*#{}##".format(self._ownCalcPass(self._password, result.nonce))
             self._write(hashedPass, _commandSocket)
             result = OWNSignaling(self._read(_commandSocket))
             if result.isNACK():
+                _error = True
                 self._logger.error("Password error while establishing command session")
             elif result.isACK():
                 self._logger.info("Command session established")
         elif result.isACK():
             self._logger.info("Command session established")
         
-        self._write(str(message), _commandSocket)
-        result = OWNSignaling(self._read(_commandSocket))
-        if result.isNACK():
+        if not _error:
             self._write(str(message), _commandSocket)
             result = OWNSignaling(self._read(_commandSocket))
             if result.isNACK():
-                self._logger.error("Could not send message {}.".format(message))
+                self._write(str(message), _commandSocket)
+                result = OWNSignaling(self._read(_commandSocket))
+                if result.isNACK():
+                    self._logger.error("Could not send message {}.".format(message))
+                elif result.isACK():
+                    self._logger.info("Message {} was successfully sent.".format(message))
             elif result.isACK():
                 self._logger.info("Message {} was successfully sent.".format(message))
-        elif result.isACK():
-            self._logger.info("Message {} was successfully sent.".format(message))
-        else:
-            self._logger.info("Message {} received response {}.".format(message,  result))
+            else:
+                self._logger.info("Message {} received response {}.".format(message,  result))
 
         _commandSocket.shutdown(socket.SHUT_RDWR)
         _commandSocket.close()
@@ -116,7 +121,7 @@ class OWNConnection():
         """ Acts as an entry point to read messages on the event bus.
         It will read one frame and return it as an OWNMessage object """
 
-        return OWNEvent(self._read())
+        return OWNEvent.parse(self._read())
     
     def _ownCalcPass (self, password, nonce, test=False) :
         start = True    

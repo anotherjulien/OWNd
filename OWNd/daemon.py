@@ -34,10 +34,11 @@ class OWNDaemon(threading.Thread):
                 break
             
             message = self._connection.getNext()
-            self._logger.debug("Received: {}".format(message))
-            if message.isEvent():
-                self._logger.debug("Sending message to handler.")
-                self._handler(message)
+            if message is not None:
+                self._logger.debug("Received: {}".format(message))
+                if message.isEvent():
+                    self._logger.debug("Sending message to handler.")
+                    self._handler(message)
 
     def stop(self):
         """ Blocks the thread, performs cleanup of the associated
