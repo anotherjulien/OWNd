@@ -314,7 +314,7 @@ class OWNBurglarAlarmEvent(OWNEvent):
             self._system = True
             self._humanReadableLog = "System is reporting: "
         elif self._where.startswith('#'):
-            self._zone = self._where[1:]
+            self._zone = str(self._where)[1:]
             if self._zone == '12':
                 self._zone = 'c'
             elif self._zone == '15':
@@ -324,8 +324,8 @@ class OWNBurglarAlarmEvent(OWNEvent):
                 self._zone = int(self._zone[0])
             self._humanReadableLog = "Zone {} is reporting: ".format(self._zone)
         else:
-            self._zone = int(self._where[0])
-            self._sensor = int(self._where[1:])
+            self._zone = int(str(self._where)[0])
+            self._sensor = int(str(self._where)[1:])
             if self._zone == 0 :
                 self._humanReadableLog = "Device {} in input zone is reporting: ".format(self._sensor)
             else:
@@ -453,7 +453,7 @@ class OWNEnergyEvent(OWNEvent):
         if  not str(self._where).startswith('5'):
             return None
         
-        self._sensor = self._where[1:]
+        self._sensor = str(self._where)[1:]
         self._activePower = None
         self._hourlyConsumption = None
         self._dailyConsumption = None
@@ -529,7 +529,7 @@ class OWNDryContactEvent(OWNEvent):
 
         self._state = 1 if self._what == 31 else 0
         self._detection = int(self._whatParam[0])
-        self._sensor = self._where[1:]
+        self._sensor = str(self._where)[1:]
 
         if self._detection == 1:
             self._humanReadableLog = "Sensor {} detected {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
@@ -556,7 +556,7 @@ class OWNCENPlusEvent(OWNEvent):
 
         self._state = self._what
         self._pushButton = int(self._whatParam[0])
-        self._object = self._where[1:]
+        self._object = str(self._where)[1:]
 
         if self._state == 21:
             self._humanReadableLog = "Button {} of CEN+ object {} has been pressed".format(self._pushButton, self._object)
