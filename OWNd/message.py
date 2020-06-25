@@ -13,8 +13,7 @@ class OWNMessage():
     _NONCE = re.compile("^\*#(\d+)##$") #  *#123456789##
     _SHA = re.compile("^\*98\*(\d)##$") #  *98*SHA##
 
-    _WHO = re.compile("^\*#?(?P<who>\d+)\*.+##$")
-    _STATUS = re.compile("^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
+    _STATUS = re.compile("^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>#?\*|\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
     _STATUS_REQUEST = re.compile("^\*#(?P<who>\d+)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *#WHO*WHERE
     _DIMENSION_WRITING = re.compile("^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
     _DIMENSION_REQUEST = re.compile("^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$") #  *#WHO*WHERE*DIMENSION##
@@ -50,18 +49,27 @@ class OWNEvent(OWNMessage):
 
     @classmethod
     def parse(cls, data):
-        _WHO_REGEX = re.compile("^\*#?(?P<who>\d+)\*.+##$")
-        _match = _WHO_REGEX.match(data)
+        _match = re.match("^\*#?(?P<who>\d+)\*.+##$", data)
         
         if _match:
             _who = int(_match.group('who'))
         
-        if _who == 1:
-            return OWNLightingEvent(data)
-        elif _who == 2:
-            return OWNAutomationEvent(data)
-        elif _who == 18:
-            return OWNEnergyEvent(data)
+            if _who == 1:
+                return OWNLightingEvent(data)
+            elif _who == 2:
+                return OWNAutomationEvent(data)
+            elif _who == 5:
+                return OWNBurglarAlarmEvent(data)
+            elif _who == 15:
+                return OWNCENEvent(data)
+            elif _who == 18:
+                return OWNEnergyEvent(data)
+            elif _who == 25:
+                _where = re.match("^\*.+\*(?P<where>\d+)##$", data).group('where')
+                if _where.startswith('2'):
+                    return OWNCENPlusEvent(data)
+                elif _where.startswith('3'):
+                    return OWNDryContactEvent(data)
 
         return None
 
@@ -74,6 +82,8 @@ class OWNEvent(OWNMessage):
             self._type = 'STATUS'
             self._who = int(self._match.group('who'))
             self._what = int(self._match.group('what'))
+            if self._what == 1000:
+                self._family = 'COMMAND_TRANSLATION'
             self._whatParam = self._match.group('what_param').split('#')
             del self._whatParam[0]
             self._where = int(self._match.group('where'))
@@ -115,6 +125,26 @@ class OWNEvent(OWNMessage):
             self._dimensionValue = self._match.group('dimension_value').split('*')
             del self._dimensionValue[0]
 
+class OWNSceneEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._scenario = self._what
+        self._controlPanel = self._where
+
+    @property
+    def scenario(self):
+        return self._scenario
+
+    @property
+    def controlPanel(self):
+        return self._controlPanel
+
+    @property
+    def humanReadableLog(self):
+        return "Scenario {} from control panel {} has been launched.".format(self._scenario, self._controlPanel)
+
 class OWNLightingEvent(OWNEvent):
 
     def __init__(self, data):
@@ -125,10 +155,7 @@ class OWNLightingEvent(OWNEvent):
         self._timer = None
         self._humanReadableLog = self._raw
 
-        if self._what is not None:
-            if self._what == 1000:
-                self._family = 'COMMAND_TRANSLATION'
-                return None
+        if self._what is not None and self._what != 1000:
             self._state = self._what
             if self._state == 0:
                 self._humanReadableLog = "Light {} is switched off.".format(self._where)
@@ -180,7 +207,7 @@ class OWNLightingEvent(OWNEvent):
         return self._brightness
 
     @property
-    def is_on(self):
+    def isOn(self):
         return self._state > 0
     
     @property
@@ -204,11 +231,9 @@ class OWNAutomationEvent(OWNEvent):
         self._isClosed = None
         self._humanReadableLog = self._raw
 
-        if self._what is not None:
-            if self._what == 1000:
-                self._family = 'COMMAND_TRANSLATION'
-                return None
+        if self._what is not None and self._what != 1000:
             self._state = self._what
+
         if self._dimension is not None:
             if self._dimension == 10:
                 self._state = int(self._dimensionValue[0])
@@ -221,6 +246,8 @@ class OWNAutomationEvent(OWNEvent):
             self._isOpening = False
             self._isClosing = False
         elif self._state == 10:
+            self._isOpening = False
+            self._isClosing = False
             if self._position == 0:
                 self._humanReadableLog = "Cover {} is closed.".format(self._where)
                 self._isClosed = True
@@ -246,26 +273,175 @@ class OWNAutomationEvent(OWNEvent):
                 self._isClosing = True
                 self._isOpening = False
                 self._isClosed = False
-            else:
-                self._isOpening = False
-                self._isClosing = False
     
     @property
-    def is_opening(self):
+    def state(self):
+        return self._state
+    
+    @property
+    def isOpening(self):
         return self._isOpening
 
     @property
-    def is_closing(self):
+    def isClosing(self):
         return self._isClosing
 
     @property
-    def is_closed(self):
+    def isClosed(self):
         return self._isClosed
 
     @property
-    def current_position(self):
+    def currentPosition(self):
         return self._position
     
+    @property
+    def humanReadableLog(self):
+        return self._humanReadableLog
+
+class OWNBurglarAlarmEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._stateCode = int(self._what)
+        self._state = None
+        self._system = False
+        self._zone = None
+        self._sensor = None
+        self._humanReadableLog = self._raw
+
+        if self._where == "*":
+            self._system = True
+            self._humanReadableLog = "System is reporting: "
+        elif self._where.startswith('#'):
+            self._zone = self._where[1:]
+            if self._zone == '12':
+                self._zone = 'c'
+            elif self._zone == '15':
+                self._zone = 'f'
+            else:
+                self._sensor = int(self._zone[1:])
+                self._zone = int(self._zone[0])
+            self._humanReadableLog = "Zone {} is reporting: ".format(self._zone)
+        else:
+            self._zone = int(self._where[0])
+            self._sensor = int(self._where[1:])
+            if self._zone == 0 :
+                self._humanReadableLog = "Device {} in input zone is reporting: ".format(self._sensor)
+            else:
+                self._humanReadableLog = "Sensor {} in zone {} is reporting: ".format(self._sensor, self._zone)
+
+        if self._stateCode == 0:
+            self._state = 'maintenance'
+        elif self._stateCode == 1:
+            self._state = 'activation'
+        elif self._stateCode == 2:
+            self._state = 'deactivation'
+        elif self._stateCode == 3:
+            self._state = 'delay end'
+        elif self._stateCode == 4:
+            self._state = 'system battery fault'
+        elif self._stateCode == 5:
+            self._state = 'battery ok'
+        elif self._stateCode == 6:
+            self._state = 'no network'
+        elif self._stateCode == 7:
+            self._state = 'network present'
+        elif self._stateCode == 8:
+            self._state = 'engage'
+        elif self._stateCode == 9:
+            self._state = 'disengage'
+        elif self._stateCode == 10:
+            self._state = 'battery unloads'
+        elif self._stateCode == 11:
+            self._state = 'active zone'
+        elif self._stateCode == 12:
+            self._state = 'technical alarm'
+        elif self._stateCode == 13:
+            self._state = 'reset technical alarm'
+        elif self._stateCode == 14:
+            self._state = 'no reception'
+        elif self._stateCode == 15:
+            self._state = 'intrusion alarm'
+        elif self._stateCode == 16:
+            self._state = 'tampering'
+        elif self._stateCode == 17:
+            self._state = 'anti-panic alarm'
+        elif self._stateCode == 18:
+            self._state = 'non-active zone'
+        elif self._stateCode == 26:
+            self._state = 'start programming'
+        elif self._stateCode == 27:
+            self._state = 'stop programming'
+        elif self._stateCode == 31:
+            self._state = 'silent alarm'
+
+        self._humanReadableLog = self._humanReadableLog + "'{}'.".format(self._state)
+
+    @property
+    def general(self):
+        return self._system
+    
+    @property
+    def zone(self):
+        return self._zone
+
+    @property
+    def sensor(self):
+        return self._sensor
+
+    @property
+    def isActive(self):
+        return self._stateCode == 1 or self._stateCode == 11
+
+    @property
+    def isEngaged(self):
+        return self._stateCode == 8
+
+    @property
+    def isAlarm(self):
+        return self._stateCode == 12 or self._stateCode == 15 or self._stateCode == 16 or self._stateCode == 17 or self._stateCode == 31
+
+    @property
+    def humanReadableLog(self):
+        return self._humanReadableLog
+            
+
+
+class OWNCENEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._state = self._whatParam[0]
+        self._pushButton = self._what
+        self._object = self._where
+
+        if self._state == None:
+            self._humanReadableLog = "Button {} of CEN object {} has been pressed.".format(self._pushButton, self._object)
+        elif int(self._state) == 3:
+            self._humanReadableLog = "Button {} of CEN object {} is being held pressed.".format(self._pushButton, self._object)
+        elif int(self._state) == 1:
+            self._humanReadableLog = "Button {} of CEN object {} has been released after a short press.".format(self._pushButton, self._object)
+        elif int(self._state) == 2:
+            self._humanReadableLog = "Button {} of CEN object {} has been released after a long press.".format(self._pushButton, self._object)
+
+    @property
+    def isPressed(self):
+        return self._state == None
+
+    @property
+    def isHeld(self):
+        return int(self._state) == 3
+
+    @property
+    def isReleasedAfterShortPress(self):
+        return int(self._state) == 1
+
+    @property
+    def isReleasedAfterLongPress(self):
+        return int(self._state) == 2
+
     @property
     def humanReadableLog(self):
         return self._humanReadableLog
@@ -276,7 +452,8 @@ class OWNEnergyEvent(OWNEvent):
 
         if  not str(self._where).startswith('5'):
             return None
-
+        
+        self._sensor = self._where[1:]
         self._activePower = None
         self._hourlyConsumption = None
         self._dailyConsumption = None
@@ -288,7 +465,7 @@ class OWNEnergyEvent(OWNEvent):
         if self._dimension is not None:
             if self._dimension == 113:
                 self._activePower = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting an active power draw of {} W.".format(self._where, self._activePower)
+                self._humanReadableLog = "Sensor {} is reporting an active power draw of {} W.".format(self._sensor, self._activePower)
             elif self._dimension == 511:
                 _now = datetime.date.today()
                 _messageDate =  datetime.date(_now.year, int(self._dimensionParam[0]), int(self._dimensionParam[1]))
@@ -299,23 +476,23 @@ class OWNEnergyEvent(OWNEvent):
                     self._hourlyConsumption['date'] = _messageDate
                     self._hourlyConsumption['hour'] = int(self._dimensionValue[0])
                     self._hourlyConsumption['value'] = int(self._dimensionValue[1])
-                    self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {} at {}.".format(self._where, self._hourlyConsumption['value'], self._hourlyConsumption['date'], self._hourlyConsumption['hour'])
+                    self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {} at {}.".format(self._sensor, self._hourlyConsumption['value'], self._hourlyConsumption['date'], self._hourlyConsumption['hour'])
                 else:
                     self._hourlyConsumption['date'] = _messageDate
                     self._dailyConsumption['value'] = int(self._dimensionValue[1])
-                    self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._where, self._hourlyConsumption['value'], self._hourlyConsumption['date'])
+                    self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._hourlyConsumption['value'], self._hourlyConsumption['date'])
                     
             elif self._dimension == 54:
                 self._currentDayPartialConsumption = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh up to now today.".format(self._where, self._hourlyConsumption['value'])
+                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh up to now today.".format(self._sensor, self._hourlyConsumption['value'])
             elif self._dimension == 52:
                 _messageDate =  datetime.date(int("20" + str(self._dimensionParam[0])), self._dimensionParam[1], 1)
                 self._monthlyConsumption['date'] = _messageDate
                 self._monthlyConsumption['value'] = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._where, self._monthlyConsumption['value'], self._monthlyConsumption['date'].strftime("%B %Y"))
+                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._monthlyConsumption['value'], self._monthlyConsumption['date'].strftime("%B %Y"))
             elif self._dimension == 53:
                 self._currentMonthPartialConsumption = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh up to now this month.".format(self._where, self._currentMonthPartialConsumption['value'])
+                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh up to now this month.".format(self._sensor, self._currentMonthPartialConsumption['value'])
 
     @property
     def activePower(self):
@@ -344,6 +521,96 @@ class OWNEnergyEvent(OWNEvent):
     @property
     def humanReadableLog(self):
         return self._humanReadableLog
+        
+class OWNDryContactEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._state = 1 if self._what == 31 else 0
+        self._detection = int(self._whatParam[0])
+        self._sensor = self._where[1:]
+
+        if self._detection == 1:
+            self._humanReadableLog = "Sensor {} detected {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
+        else:
+            self._humanReadableLog = "Sensor {} reported {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
+
+    @property
+    def isOn(self):
+        return self._state == 1
+    
+    @property
+    def isDetection(self):
+        return self._detection == 1
+
+    @property
+    def humanReadableLog(self):
+        return self._humanReadableLog
+
+
+class OWNCENPlusEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._state = self._what
+        self._pushButton = int(self._whatParam[0])
+        self._object = self._where[1:]
+
+        if self._state == 21:
+            self._humanReadableLog = "Button {} of CEN+ object {} has been pressed".format(self._pushButton, self._object)
+        elif self._state == 22:
+            self._humanReadableLog = "Button {} of CEN+ object {} is being held pressed".format(self._pushButton, self._object)
+        elif self._state == 23:
+            self._humanReadableLog = "Button {} of CEN+ object {} is still being held pressed".format(self._pushButton, self._object)
+        elif self._state == 24:
+            self._humanReadableLog = "Button {} of CEN+ object {} has been released".format(self._pushButton, self._object)
+        elif self._state == 25:
+            self._humanReadableLog = "Button {} of CEN+ object {} has been slowly rotated clockwise".format(self._pushButton, self._object)
+        elif self._state == 26:
+            self._humanReadableLog = "Button {} of CEN+ object {} has been quickly rotated clockwise".format(self._pushButton, self._object)
+        elif self._state == 27:
+            self._humanReadableLog = "Button {} of CEN+ object {} has been slowly rotated counter-clockwise".format(self._pushButton, self._object)
+        elif self._state == 28:
+            self._humanReadableLog = "Button {} of CEN+ object {} has been quickly rotated counter-clockwise".format(self._pushButton, self._object)
+    
+    @property
+    def isShortPressed(self):
+        return self._state == 21
+
+    @property
+    def isHeld(self):
+        return self._state == 22
+    
+    @property
+    def isStillHeld(self):
+        return self._state == 23
+
+    @property
+    def isReleased(self):
+        return self._state == 24
+
+    @property
+    def isSlowlyTurnedCW(self):
+        return self._state == 25
+
+    @property
+    def isQuicklyTurnedCW(self):
+        return self._state == 26
+
+    @property
+    def isSlowlyTurnedCCW(self):
+        return self._state == 27
+
+    @property
+    def isQuicklyTurnedCCW(self):
+        return self._state == 28
+
+    @property
+    def humanReadableLog(self):
+        return self._humanReadableLog
+
 
 class OWNCommand(OWNMessage):
     """ This class is a subclass of messages. All messages sent during a command session are commands.
@@ -373,26 +640,6 @@ class OWNCommand(OWNMessage):
         self._where = self._match.group('where')
 
     @classmethod
-    def switchON(cls, _where):
-        return cls("*1*1*{}##".format(_where))
-
-    @classmethod
-    def switchOFF(cls, _where):
-        return cls("*1*0*{}##".format(_where))
-
-    @classmethod
-    def setLightTo(cls, _where, _level=30):
-        _level = round(_level/10)
-        if _level == 1:
-            _level = 2
-        return cls("*1*{}*{}##".format(_level, _where))
-
-    @classmethod
-    def setLightToFine(cls, _where, _level=30):
-        _level = int(_level)+100
-        return cls("*#1*{}#1*{}*2##".format(_where, _level))
-
-    @classmethod
     def raiseShutter(cls, _where):
         return cls("*2*1*{}##".format(_where))
     
@@ -407,6 +654,31 @@ class OWNCommand(OWNMessage):
     @classmethod
     def setShutterTo(cls, _where, _level=30):
         return cls("*#2*{}#11#001*{}##".format(_where, _level))
+
+class OWNLightingCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+    @classmethod
+    def switchON(cls, _where):
+        return cls("*1*1*{}##".format(_where))
+
+    @classmethod
+    def switchOFF(cls, _where):
+        return cls("*1*0*{}##".format(_where))
+
+    # @classmethod
+    # def setLightTo(cls, _where, _level=30):
+    #     _level = round(_level/10)
+    #     if _level == 1:
+    #         _level = 2
+    #     return cls("*1*{}*{}##".format(_level, _where))
+
+    @classmethod
+    def setBrightness(cls, _where, _level=30):
+        _level = int(_level)+100
+        return cls("*#1*{}#1*{}*2##".format(_where, _level))
 
 class OWNSignaling(OWNMessage):
     """ This class is a subclass of messages. It is dedicated to signaling messages such as ACK or Authentication negotiation """
