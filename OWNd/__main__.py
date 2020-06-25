@@ -49,6 +49,7 @@ def main():
             time.sleep(0.5)
     except ServiceExit:
         try:
+            print("Stoping OWNd.")
             _daemon.stop()
             _daemon.join()
             sys.exit(0)

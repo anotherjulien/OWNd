@@ -127,6 +127,7 @@ class OWNLightingEvent(OWNEvent):
 
         if self._what is not None:
             if self._what == 1000:
+                self._family = 'COMMAND_TRANSLATION'
                 return None
             self._state = self._what
             if self._state == 0:
@@ -205,6 +206,7 @@ class OWNAutomationEvent(OWNEvent):
 
         if self._what is not None:
             if self._what == 1000:
+                self._family = 'COMMAND_TRANSLATION'
                 return None
             self._state = self._what
         if self._dimension is not None:
