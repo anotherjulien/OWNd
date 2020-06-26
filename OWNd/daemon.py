@@ -3,8 +3,8 @@ This is the central point of control of the whole daemon """
 
 import threading
 
-from connection import OWNConnection
-from message import *
+from OWNd.connection import OWNConnection
+from OWNd.message import *
 
 class OWNDaemon(threading.Thread):
     """ Main listening loop for the whole daemon """

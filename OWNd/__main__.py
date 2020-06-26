@@ -3,9 +3,9 @@ import logging
 import signal
 import sys
 
-from connection import OWNConnection
-from message import *
-from daemon import OWNDaemon
+from OWNd.connection import OWNConnection
+from OWNd.message import *
+from OWNd.daemon import OWNDaemon
 
 class ServiceExit(Exception):
     """

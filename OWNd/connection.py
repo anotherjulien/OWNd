@@ -1,6 +1,6 @@
 """ This module handles TCP connections to the OpenWebNet gateway """
 
-from message import *
+from OWNd.message import *
 import socket
 
 class OWNConnection():
