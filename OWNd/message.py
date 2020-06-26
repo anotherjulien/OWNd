@@ -54,14 +54,22 @@ class OWNEvent(OWNMessage):
         if _match:
             _who = int(_match.group('who'))
         
-            if _who == 1:
+            if _who == 0:
+                return OWNScenarioEvent(data)
+            elif _who == 1:
                 return OWNLightingEvent(data)
             elif _who == 2:
                 return OWNAutomationEvent(data)
+            elif _who == 4:
+                return OWNHeatingEvent(data)
             elif _who == 5:
-                return OWNBurglarAlarmEvent(data)
+                return OWNAlarmEvent(data)
+            elif _who == 9:
+                return OWNAuxEvent(data)
             elif _who == 15:
                 return OWNCENEvent(data)
+            elif _who == 17:
+                return OWNSceneEvent(data)
             elif _who == 18:
                 return OWNEnergyEvent(data)
             elif _who == 25:
@@ -75,6 +83,7 @@ class OWNEvent(OWNMessage):
 
     def __init__(self, data):
         self._raw = data
+        self._humanReadableLog = self._raw
 
         if self._STATUS.match(self._raw):
             self._match = self._STATUS.match(self._raw)
@@ -125,7 +134,7 @@ class OWNEvent(OWNMessage):
             self._dimensionValue = self._match.group('dimension_value').split('*')
             del self._dimensionValue[0]
 
-class OWNSceneEvent(OWNEvent):
+class OWNScenarioEvent(OWNEvent):
 
     def __init__(self, data):
         super().__init__(data)
@@ -153,7 +162,6 @@ class OWNLightingEvent(OWNEvent):
         self._state = None
         self._brightness = None
         self._timer = None
-        self._humanReadableLog = self._raw
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
@@ -229,7 +237,6 @@ class OWNAutomationEvent(OWNEvent):
         self._isOpening = None
         self._isClosing = None
         self._isClosed = None
-        self._humanReadableLog = self._raw
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
@@ -298,7 +305,12 @@ class OWNAutomationEvent(OWNEvent):
     def humanReadableLog(self):
         return self._humanReadableLog
 
-class OWNBurglarAlarmEvent(OWNEvent):
+class OWNHeatingEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+class OWNAlarmEvent(OWNEvent):
 
     def __init__(self, data):
         super().__init__(data)
@@ -308,7 +320,6 @@ class OWNBurglarAlarmEvent(OWNEvent):
         self._system = False
         self._zone = None
         self._sensor = None
-        self._humanReadableLog = self._raw
 
         if self._where == "*":
             self._system = True
@@ -406,7 +417,52 @@ class OWNBurglarAlarmEvent(OWNEvent):
     def humanReadableLog(self):
         return self._humanReadableLog
             
+class OWNAuxEvent(OWNEvent):
 
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._channel = self._where
+
+        self._state = self._what
+        if self._state == 0:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'OFF'.".format(self._channel)
+        elif self._state == 1:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'ON'.".format(self._channel)
+        elif self._state == 2:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'TOGGLE'.".format(self._channel)
+        elif self._state == 3:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'STOP'.".format(self._channel)
+        elif self._state == 4:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'UP'.".format(self._channel)
+        elif self._state == 5:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'DOWN'.".format(self._channel)
+        elif self._state == 6:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'ENABLED'.".format(self._channel)
+        elif self._state == 7:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'DISABLED'.".format(self._channel)
+        elif self._state == 8:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'RESET_GEN'.".format(self._channel)
+        elif self._state == 9:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'RESET_BI'.".format(self._channel)
+        elif self._state == 10:
+            self._humanReadableLog = "Auxilliary channel {} is set to 'RESET_TRI'.".format(self._channel)
+
+    @property
+    def channel(self):
+        return self._channel
+
+    @property
+    def stateCode(self):
+        return self._state
+
+    @property
+    def isON(self):
+        return self._state == 1
+
+    @property
+    def humanReadableLog(self):
+        return self._humanReadableLog            
 
 class OWNCENEvent(OWNEvent):
 
@@ -446,6 +502,53 @@ class OWNCENEvent(OWNEvent):
     def humanReadableLog(self):
         return self._humanReadableLog
 
+class OWNSceneEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._scene = self._where
+        self._state = self._what
+
+    @property
+    def scenario(self):
+        return self._scene
+
+    @property
+    def state(self):
+        return self._state
+
+    @property
+    def isON(self):
+        if self._state == 1:
+            return True
+        elif self._state == 2:
+            return False
+        else:
+            return None
+    
+    @property
+    def isEnabled(self):
+        if self._state == 3:
+            return True
+        elif self._state == 4:
+            return False
+        else:
+            return None
+
+    @property
+    def humanReadableLog(self):
+        if self._state == 1:
+            _status = "started"
+        elif self._state == 2:
+            _status = "stoped"
+        elif self._state == 3:
+            _status = "enabled"
+        elif self._state == 4:
+            _status = "disabled"
+
+        return "Scene {} is {}.".format(self._scene, _status)
+
 class OWNEnergyEvent(OWNEvent):
     def __init__(self, data):
         super().__init__(data)
@@ -460,7 +563,6 @@ class OWNEnergyEvent(OWNEvent):
         self._currentDayPartialConsumption = None
         self._monthlyConsumption = None
         self._currentMonthPartialConsumption = None
-        self._humanReadableLog = self._raw
         
         if self._dimension is not None:
             if self._dimension == 113:
