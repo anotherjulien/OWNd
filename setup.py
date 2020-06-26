@@ -11,7 +11,6 @@ setuptools.setup(
     description="Python interface for the OpenWebNet protocol",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/anotherjulien/OWNd",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
