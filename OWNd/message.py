@@ -23,13 +23,13 @@ class OWNMessage():
     def __init__(self, data):
         self._raw = data
 
-    def isEvent(self):
+    def is_event(self):
         return self._family == 'EVENT'
 
-    def isCommand(self):
+    def is_command(self):
         return self._family == 'COMMAND'
 
-    def isRequest(self):
+    def is_request(self):
         return self._family == 'REQUEST'
 
     @property
@@ -83,7 +83,7 @@ class OWNEvent(OWNMessage):
 
     def __init__(self, data):
         self._raw = data
-        self._humanReadableLog = self._raw
+        self._human_readable_log = self._raw
 
         if self._STATUS.match(self._raw):
             self._match = self._STATUS.match(self._raw)
@@ -93,14 +93,14 @@ class OWNEvent(OWNMessage):
             self._what = int(self._match.group('what'))
             if self._what == 1000:
                 self._family = 'COMMAND_TRANSLATION'
-            self._whatParam = self._match.group('what_param').split('#')
-            del self._whatParam[0]
+            self._what_param = self._match.group('what_param').split('#')
+            del self._what_param[0]
             self._where = self._match.group('where')
-            self._whereParam = self._match.group('where_param').split('#')
-            del self._whereParam[0]
+            self._where_param = self._match.group('where_param').split('#')
+            del self._where_param[0]
             self._dimension = None
-            self._dimensionParam = None
-            self._dimensionValue = None
+            self._dimension_param = None
+            self._dimension_value = None
 
         elif self._DIMENSION_REQUEST_REPLY.match(self._raw):
             self._match = self._DIMENSION_REQUEST_REPLY.match(self._raw)
@@ -108,15 +108,15 @@ class OWNEvent(OWNMessage):
             self._type = 'DIMENSION_REQUEST_REPLY'
             self._who = int(self._match.group('who'))
             self._what = None
-            self._whatParam = None
+            self._what_param = None
             self._where = self._match.group('where')
-            self._whereParam = self._match.group('where_param').split('#')
-            del self._whereParam[0]
+            self._where_param = self._match.group('where_param').split('#')
+            del self._where_param[0]
             self._dimension = int(self._match.group('dimension'))
-            self._dimensionParam = self._match.group('dimension_param').split('#')
-            del self._dimensionParam[0]
-            self._dimensionValue = self._match.group('dimension_value').split('*')
-            del self._dimensionValue[0]
+            self._dimension_param = self._match.group('dimension_param').split('#')
+            del self._dimension_param[0]
+            self._dimension_value = self._match.group('dimension_value').split('*')
+            del self._dimension_value[0]
 
         elif self._DIMENSION_WRITING.match(self._raw):
             self._match = self._DIMENSION_WRITING.match(self._raw)
@@ -124,15 +124,15 @@ class OWNEvent(OWNMessage):
             self._type = 'DIMENSION_WRITING'
             self._who = int(self._match.group('who'))
             self._what = None
-            self._whatParam = None
+            self._what_param = None
             self._where = self._match.group('where')
-            self._whereParam = self._match.group('where_param').split('#')
-            del self._whereParam[0]
+            self._where_param = self._match.group('where_param').split('#')
+            del self._where_param[0]
             self._dimension = int(self._match.group('dimension'))
-            self._dimensionParam = self._match.group('dimension_param').split('#')
-            del self._dimensionParam[0]
-            self._dimensionValue = self._match.group('dimension_value').split('*')
-            del self._dimensionValue[0]
+            self._dimension_param = self._match.group('dimension_param').split('#')
+            del self._dimension_param[0]
+            self._dimension_value = self._match.group('dimension_value').split('*')
+            del self._dimension_value[0]
 
 class OWNScenarioEvent(OWNEvent):
 
@@ -140,7 +140,7 @@ class OWNScenarioEvent(OWNEvent):
         super().__init__(data)
 
         self._scenario = self._what
-        self._controlPanel = self._where
+        self._control_panel = self._where
 
     @property
     def scenario(self):
@@ -148,11 +148,11 @@ class OWNScenarioEvent(OWNEvent):
 
     @property
     def controlPanel(self):
-        return self._controlPanel
+        return self._control_panel
 
     @property
-    def humanReadableLog(self):
-        return "Scenario {} from control panel {} has been launched.".format(self._scenario, self._controlPanel)
+    def human_readable_log(self):
+        return "Scenario {} from control panel {} has been launched.".format(self._scenario, self._control_panel)
 
 class OWNLightingEvent(OWNEvent):
 
@@ -166,56 +166,56 @@ class OWNLightingEvent(OWNEvent):
         if self._what is not None and self._what != 1000:
             self._state = self._what
             if self._state == 0:
-                self._humanReadableLog = "Light {} is switched off.".format(self._where)
+                self._human_readable_log = "Light {} is switched off.".format(self._where)
             elif self._state == 1:
-                self._humanReadableLog = "Light {} is switched on.".format(self._where)
+                self._human_readable_log = "Light {} is switched on.".format(self._where)
             elif self._state > 1 and self._state < 11:
                 self._brightness = self._state * 10
-                self._humanReadableLog = "Light {} is switched on at {}%.".format(self._where, self._bightness)
+                self._human_readable_log = "Light {} is switched on at {}%.".format(self._where, self._bightness)
             elif self._state == 11:
                 self._timer = 60
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
             elif self._state == 12:
                 self._timer = 120
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
             elif self._state == 13:
                 self._timer = 180
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
             elif self._state == 14:
                 self._timer = 240
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
             elif self._state == 15:
                 self._timer = 300
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
             elif self._state == 16:
                 self._timer = 900
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
             elif self._state == 17:
                 self._timer = 30
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
             elif self._state == 18:
                 self._timer = 0.5
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
         
         if self._dimension is not None:
             if self._dimension == 1:
-                self._brightness = int(self._dimensionValue[0]) - 100
+                self._brightness = int(self._dimension_value[0]) - 100
                 if self._brightness == 0:
                     self._state = 0
-                    self._humanReadableLog = "Light {} is switched off.".format(self._where)
+                    self._human_readable_log = "Light {} is switched off.".format(self._where)
                 else:
                     self._state = 1
-                    self._humanReadableLog = "Light {} is switched on at {}%.".format(self._where, self._bightness)
+                    self._human_readable_log = "Light {} is switched on at {}%.".format(self._where, self._bightness)
             elif self._dimension == 2:
-                self._timer = int(self._dimensionValue[0])*3600 + int(self._dimensionValue[1])*60 + int(self._dimensionValue[2])
-                self._humanReadableLog = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._timer = int(self._dimension_value[0])*3600 + int(self._dimension_value[1])*60 + int(self._dimension_value[2])
+                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
 
     @property
     def brightness(self):
         return self._brightness
 
     @property
-    def isOn(self):
+    def is_on(self):
         return self._state > 0
     
     @property
@@ -223,8 +223,8 @@ class OWNLightingEvent(OWNEvent):
         return self._timer
     
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog
+    def human_readable_log(self):
+        return self._human_readable_log
 
 class OWNAutomationEvent(OWNEvent):
     def __init__(self, data):
@@ -234,76 +234,76 @@ class OWNAutomationEvent(OWNEvent):
         self._position = None
         self._priority = None
         self._info = None
-        self._isOpening = None
-        self._isClosing = None
-        self._isClosed = None
+        self._is_opening = None
+        self._is_closing = None
+        self._is_closed = None
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
 
         if self._dimension is not None:
             if self._dimension == 10:
-                self._state = int(self._dimensionValue[0])
-                self._position = int(self._dimensionValue[1])
-                self._priority = int(self._dimensionValue[2])
-                self._info = int(self._dimensionValue[3])
+                self._state = int(self._dimension_value[0])
+                self._position = int(self._dimension_value[1])
+                self._priority = int(self._dimension_value[2])
+                self._info = int(self._dimension_value[3])
 
         if self._state == 0:
-            self._humanReadableLog = "Cover {} stopped.".format(self._where)
-            self._isOpening = False
-            self._isClosing = False
+            self._human_readable_log = "Cover {} stopped.".format(self._where)
+            self._is_opening = False
+            self._is_closing = False
         elif self._state == 10:
-            self._isOpening = False
-            self._isClosing = False
+            self._is_opening = False
+            self._is_closing = False
             if self._position == 0:
-                self._humanReadableLog = "Cover {} is closed.".format(self._where)
-                self._isClosed = True
+                self._human_readable_log = "Cover {} is closed.".format(self._where)
+                self._is_closed = True
             else:
-                self._humanReadableLog = "Cover {} is opened at {}%.".format(self._where, self._position)
-                self._isClosed = False
+                self._human_readable_log = "Cover {} is opened at {}%.".format(self._where, self._position)
+                self._is_closed = False
         else:
             if self._state == 1:
-                self._humanReadableLog = "Cover {} is opening.".format(self._where)
-                self._isOpening = True
-                self._isClosing = False
+                self._human_readable_log = "Cover {} is opening.".format(self._where)
+                self._is_opening = True
+                self._is_closing = False
             elif self._state == 11 or  self._state == 13:
-                self._humanReadableLog = "Cover {} is opening from intial position {}.".format(self._where, self._position)
-                self._isOpening = True
-                self._isClosing = False
-                self._isClosed = False
+                self._human_readable_log = "Cover {} is opening from intial position {}.".format(self._where, self._position)
+                self._is_opening = True
+                self._is_closing = False
+                self._is_closed = False
             elif self._state == 2:
-                self._humanReadableLog = "Cover {} is closing.".format(self._where)
-                self._isClosing = True
-                self._isOpening = False
+                self._human_readable_log = "Cover {} is closing.".format(self._where)
+                self._is_closing = True
+                self._is_opening = False
             elif self._state == 12 or self._state == 14:
-                self._humanReadableLog = "Cover {} is closing from intial position {}.".format(self._where, self._position)
-                self._isClosing = True
-                self._isOpening = False
-                self._isClosed = False
+                self._human_readable_log = "Cover {} is closing from intial position {}.".format(self._where, self._position)
+                self._is_closing = True
+                self._is_opening = False
+                self._is_closed = False
     
     @property
     def state(self):
         return self._state
     
     @property
-    def isOpening(self):
-        return self._isOpening
+    def is_opening(self):
+        return self._is_opening
 
     @property
-    def isClosing(self):
-        return self._isClosing
+    def is_closing(self):
+        return self._is_closing
 
     @property
-    def isClosed(self):
-        return self._isClosed
+    def is_closed(self):
+        return self._is_closed
 
     @property
     def currentPosition(self):
         return self._position
     
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog
+    def human_readable_log(self):
+        return self._human_readable_log
 
 class OWNHeatingEvent(OWNEvent):
 
@@ -315,7 +315,7 @@ class OWNAlarmEvent(OWNEvent):
     def __init__(self, data):
         super().__init__(data)
 
-        self._stateCode = int(self._what)
+        self._state_code = int(self._what)
         self._state = None
         self._system = False
         self._zone = None
@@ -323,7 +323,7 @@ class OWNAlarmEvent(OWNEvent):
 
         if self._where == "*":
             self._system = True
-            self._humanReadableLog = "System is reporting: "
+            self._human_readable_log = "System is reporting: "
         elif self._where.startswith('#'):
             self._zone = self._where[1:]
             if self._zone == '12':
@@ -333,61 +333,61 @@ class OWNAlarmEvent(OWNEvent):
             else:
                 self._sensor = int(self._zone[1:])
                 self._zone = int(self._zone[0])
-            self._humanReadableLog = "Zone {} is reporting: ".format(self._zone)
+            self._human_readable_log = "Zone {} is reporting: ".format(self._zone)
         else:
             self._zone = int(self._where[0])
             self._sensor = int(self._where[1:])
             if self._zone == 0 :
-                self._humanReadableLog = "Device {} in input zone is reporting: ".format(self._sensor)
+                self._human_readable_log = "Device {} in input zone is reporting: ".format(self._sensor)
             else:
-                self._humanReadableLog = "Sensor {} in zone {} is reporting: ".format(self._sensor, self._zone)
+                self._human_readable_log = "Sensor {} in zone {} is reporting: ".format(self._sensor, self._zone)
 
-        if self._stateCode == 0:
+        if self._state_code == 0:
             self._state = 'maintenance'
-        elif self._stateCode == 1:
+        elif self._state_code == 1:
             self._state = 'activation'
-        elif self._stateCode == 2:
+        elif self._state_code == 2:
             self._state = 'deactivation'
-        elif self._stateCode == 3:
+        elif self._state_code == 3:
             self._state = 'delay end'
-        elif self._stateCode == 4:
+        elif self._state_code == 4:
             self._state = 'system battery fault'
-        elif self._stateCode == 5:
+        elif self._state_code == 5:
             self._state = 'battery ok'
-        elif self._stateCode == 6:
+        elif self._state_code == 6:
             self._state = 'no network'
-        elif self._stateCode == 7:
+        elif self._state_code == 7:
             self._state = 'network present'
-        elif self._stateCode == 8:
+        elif self._state_code == 8:
             self._state = 'engage'
-        elif self._stateCode == 9:
+        elif self._state_code == 9:
             self._state = 'disengage'
-        elif self._stateCode == 10:
+        elif self._state_code == 10:
             self._state = 'battery unloads'
-        elif self._stateCode == 11:
+        elif self._state_code == 11:
             self._state = 'active zone'
-        elif self._stateCode == 12:
+        elif self._state_code == 12:
             self._state = 'technical alarm'
-        elif self._stateCode == 13:
+        elif self._state_code == 13:
             self._state = 'reset technical alarm'
-        elif self._stateCode == 14:
+        elif self._state_code == 14:
             self._state = 'no reception'
-        elif self._stateCode == 15:
+        elif self._state_code == 15:
             self._state = 'intrusion alarm'
-        elif self._stateCode == 16:
+        elif self._state_code == 16:
             self._state = 'tampering'
-        elif self._stateCode == 17:
+        elif self._state_code == 17:
             self._state = 'anti-panic alarm'
-        elif self._stateCode == 18:
+        elif self._state_code == 18:
             self._state = 'non-active zone'
-        elif self._stateCode == 26:
+        elif self._state_code == 26:
             self._state = 'start programming'
-        elif self._stateCode == 27:
+        elif self._state_code == 27:
             self._state = 'stop programming'
-        elif self._stateCode == 31:
+        elif self._state_code == 31:
             self._state = 'silent alarm'
 
-        self._humanReadableLog = self._humanReadableLog + "'{}'.".format(self._state)
+        self._human_readable_log = self._human_readable_log + "'{}'.".format(self._state)
 
     @property
     def general(self):
@@ -402,20 +402,20 @@ class OWNAlarmEvent(OWNEvent):
         return self._sensor
 
     @property
-    def isActive(self):
-        return self._stateCode == 1 or self._stateCode == 11
+    def is_active(self):
+        return self._state_code == 1 or self._state_code == 11
 
     @property
-    def isEngaged(self):
-        return self._stateCode == 8
+    def is_engaged(self):
+        return self._state_code == 8
 
     @property
-    def isAlarm(self):
-        return self._stateCode == 12 or self._stateCode == 15 or self._stateCode == 16 or self._stateCode == 17 or self._stateCode == 31
+    def is_alarm(self):
+        return self._state_code == 12 or self._state_code == 15 or self._state_code == 16 or self._state_code == 17 or self._state_code == 31
 
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog
+    def human_readable_log(self):
+        return self._human_readable_log
             
 class OWNAuxEvent(OWNEvent):
 
@@ -426,81 +426,81 @@ class OWNAuxEvent(OWNEvent):
 
         self._state = self._what
         if self._state == 0:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'OFF'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'OFF'.".format(self._channel)
         elif self._state == 1:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'ON'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'ON'.".format(self._channel)
         elif self._state == 2:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'TOGGLE'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'TOGGLE'.".format(self._channel)
         elif self._state == 3:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'STOP'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'STOP'.".format(self._channel)
         elif self._state == 4:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'UP'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'UP'.".format(self._channel)
         elif self._state == 5:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'DOWN'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'DOWN'.".format(self._channel)
         elif self._state == 6:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'ENABLED'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'ENABLED'.".format(self._channel)
         elif self._state == 7:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'DISABLED'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'DISABLED'.".format(self._channel)
         elif self._state == 8:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'RESET_GEN'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'RESET_GEN'.".format(self._channel)
         elif self._state == 9:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'RESET_BI'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'RESET_BI'.".format(self._channel)
         elif self._state == 10:
-            self._humanReadableLog = "Auxilliary channel {} is set to 'RESET_TRI'.".format(self._channel)
+            self._human_readable_log = "Auxilliary channel {} is set to 'RESET_TRI'.".format(self._channel)
 
     @property
     def channel(self):
         return self._channel
 
     @property
-    def stateCode(self):
+    def state_code(self):
         return self._state
 
     @property
-    def isON(self):
+    def is_on(self):
         return self._state == 1
 
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog            
+    def human_readable_log(self):
+        return self._human_readable_log            
 
 class OWNCENEvent(OWNEvent):
 
     def __init__(self, data):
         super().__init__(data)
 
-        self._state = self._whatParam[0]
-        self._pushButton = self._what
+        self._state = self._what_param[0]
+        self._push_button = self._what
         self._object = self._where
 
         if self._state == None:
-            self._humanReadableLog = "Button {} of CEN object {} has been pressed.".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN object {} has been pressed.".format(self._push_button, self._object)
         elif int(self._state) == 3:
-            self._humanReadableLog = "Button {} of CEN object {} is being held pressed.".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN object {} is being held pressed.".format(self._push_button, self._object)
         elif int(self._state) == 1:
-            self._humanReadableLog = "Button {} of CEN object {} has been released after a short press.".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN object {} has been released after a short press.".format(self._push_button, self._object)
         elif int(self._state) == 2:
-            self._humanReadableLog = "Button {} of CEN object {} has been released after a long press.".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN object {} has been released after a long press.".format(self._push_button, self._object)
 
     @property
-    def isPressed(self):
+    def is_pressed(self):
         return self._state == None
 
     @property
-    def isHeld(self):
+    def is_held(self):
         return int(self._state) == 3
 
     @property
-    def isReleasedAfterShortPress(self):
+    def is_released_after_short_press(self):
         return int(self._state) == 1
 
     @property
-    def isReleasedAfterLongPress(self):
+    def is_released_after_long_press(self):
         return int(self._state) == 2
 
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog
+    def human_readable_log(self):
+        return self._human_readable_log
 
 class OWNSceneEvent(OWNEvent):
 
@@ -519,7 +519,7 @@ class OWNSceneEvent(OWNEvent):
         return self._state
 
     @property
-    def isON(self):
+    def is_on(self):
         if self._state == 1:
             return True
         elif self._state == 2:
@@ -528,7 +528,7 @@ class OWNSceneEvent(OWNEvent):
             return None
     
     @property
-    def isEnabled(self):
+    def is_enabled(self):
         if self._state == 3:
             return True
         elif self._state == 4:
@@ -537,7 +537,7 @@ class OWNSceneEvent(OWNEvent):
             return None
 
     @property
-    def humanReadableLog(self):
+    def human_readable_log(self):
         if self._state == 1:
             _status = "started"
         elif self._state == 2:
@@ -557,72 +557,72 @@ class OWNEnergyEvent(OWNEvent):
             return None
         
         self._sensor = self._where[1:]
-        self._activePower = None
-        self._hourlyConsumption = None
-        self._dailyConsumption = None
-        self._currentDayPartialConsumption = None
-        self._monthlyConsumption = None
-        self._currentMonthPartialConsumption = None
+        self._active_power = None
+        self._hourly_consumption = None
+        self._daily_consumption = None
+        self._current_day_partial_consumption = None
+        self._monthly_consumption = None
+        self._current_month_partial_consumption = None
         
         if self._dimension is not None:
             if self._dimension == 113:
-                self._activePower = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting an active power draw of {} W.".format(self._sensor, self._activePower)
+                self._active_power = int(self._dimension_value[0])
+                self._human_readable_log = "Sensor {} is reporting an active power draw of {} W.".format(self._sensor, self._active_power)
             elif self._dimension == 511:
                 _now = datetime.date.today()
-                _messageDate =  datetime.date(_now.year, int(self._dimensionParam[0]), int(self._dimensionParam[1]))
+                _messageDate =  datetime.date(_now.year, int(self._dimension_param[0]), int(self._dimension_param[1]))
                 if _messageDate > _now:
                     _messageDate.replace(year= _now.year - 1)
 
-                if int(self._dimensionValue[0]) != 25:
-                    self._hourlyConsumption['date'] = _messageDate
-                    self._hourlyConsumption['hour'] = int(self._dimensionValue[0])
-                    self._hourlyConsumption['value'] = int(self._dimensionValue[1])
-                    self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {} at {}.".format(self._sensor, self._hourlyConsumption['value'], self._hourlyConsumption['date'], self._hourlyConsumption['hour'])
+                if int(self._dimension_value[0]) != 25:
+                    self._hourly_consumption['date'] = _messageDate
+                    self._hourly_consumption['hour'] = int(self._dimension_value[0])
+                    self._hourly_consumption['value'] = int(self._dimension_value[1])
+                    self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh for {} at {}.".format(self._sensor, self._hourly_consumption['value'], self._hourly_consumption['date'], self._hourly_consumption['hour'])
                 else:
-                    self._hourlyConsumption['date'] = _messageDate
-                    self._dailyConsumption['value'] = int(self._dimensionValue[1])
-                    self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._hourlyConsumption['value'], self._hourlyConsumption['date'])
+                    self._hourly_consumption['date'] = _messageDate
+                    self._daily_consumption['value'] = int(self._dimension_value[1])
+                    self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._hourly_consumption['value'], self._hourly_consumption['date'])
                     
             elif self._dimension == 54:
-                self._currentDayPartialConsumption = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh up to now today.".format(self._sensor, self._hourlyConsumption['value'])
+                self._current_day_partial_consumption = int(self._dimension_value[0])
+                self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh up to now today.".format(self._sensor, self._hourly_consumption['value'])
             elif self._dimension == 52:
-                _messageDate =  datetime.date(int("20" + str(self._dimensionParam[0])), self._dimensionParam[1], 1)
-                self._monthlyConsumption['date'] = _messageDate
-                self._monthlyConsumption['value'] = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._monthlyConsumption['value'], self._monthlyConsumption['date'].strftime("%B %Y"))
+                _messageDate =  datetime.date(int("20" + str(self._dimension_param[0])), self._dimension_param[1], 1)
+                self._monthly_consumption['date'] = _messageDate
+                self._monthly_consumption['value'] = int(self._dimension_value[0])
+                self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._monthly_consumption['value'], self._monthly_consumption['date'].strftime("%B %Y"))
             elif self._dimension == 53:
-                self._currentMonthPartialConsumption = int(self._dimensionValue[0])
-                self._humanReadableLog = "Sensor {} is reporting a power consumtion of {} Wh up to now this month.".format(self._sensor, self._currentMonthPartialConsumption['value'])
+                self._current_month_partial_consumption = int(self._dimension_value[0])
+                self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh up to now this month.".format(self._sensor, self._current_month_partial_consumption['value'])
 
     @property
-    def activePower(self):
-        return self._activePower
+    def active_power(self):
+        return self._active_power
     
     @property
-    def hourlyConsumption(self):
-        return self._hourlyConsumption
+    def hourly_consumption(self):
+        return self._hourly_consumption
     
     @property
-    def dailyConsumption(self):
-        return self._dailyConsumption
+    def daily_consumption(self):
+        return self._daily_consumption
     
     @property
-    def currentDayPartialConsumption(self):
-        return self._currentDayPartialConsumption
+    def current_day_partial_consumption(self):
+        return self._current_day_partial_consumption
     
     @property
-    def monthlyConsumption(self):
-        return self._monthlyConsumption
+    def monthly_consumption(self):
+        return self._monthly_consumption
 
     @property
-    def currentMonthParitalConsumption(self):
-        return self._currentMonthPartialConsumption
+    def current_month_partial_consumption(self):
+        return self._current_month_partial_consumption
 
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog
+    def human_readable_log(self):
+        return self._human_readable_log
         
 class OWNDryContactEvent(OWNEvent):
 
@@ -630,26 +630,25 @@ class OWNDryContactEvent(OWNEvent):
         super().__init__(data)
 
         self._state = 1 if self._what == 31 else 0
-        self._detection = int(self._whatParam[0])
+        self._detection = int(self._what_param[0])
         self._sensor = self._where[1:]
 
         if self._detection == 1:
-            self._humanReadableLog = "Sensor {} detected {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
+            self._human_readable_log = "Sensor {} detected {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
         else:
-            self._humanReadableLog = "Sensor {} reported {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
+            self._human_readable_log = "Sensor {} reported {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
 
     @property
-    def isOn(self):
+    def is_on(self):
         return self._state == 1
     
     @property
-    def isDetection(self):
+    def is_detection(self):
         return self._detection == 1
 
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog
-
+    def human_readable_log(self):
+        return self._human_readable_log
 
 class OWNCENPlusEvent(OWNEvent):
 
@@ -657,62 +656,61 @@ class OWNCENPlusEvent(OWNEvent):
         super().__init__(data)
 
         self._state = self._what
-        self._pushButton = int(self._whatParam[0])
+        self._push_button = int(self._what_param[0])
         self._object = self._where[1:]
 
         if self._state == 21:
-            self._humanReadableLog = "Button {} of CEN+ object {} has been pressed".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} has been pressed".format(self._push_button, self._object)
         elif self._state == 22:
-            self._humanReadableLog = "Button {} of CEN+ object {} is being held pressed".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} is being held pressed".format(self._push_button, self._object)
         elif self._state == 23:
-            self._humanReadableLog = "Button {} of CEN+ object {} is still being held pressed".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} is still being held pressed".format(self._push_button, self._object)
         elif self._state == 24:
-            self._humanReadableLog = "Button {} of CEN+ object {} has been released".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} has been released".format(self._push_button, self._object)
         elif self._state == 25:
-            self._humanReadableLog = "Button {} of CEN+ object {} has been slowly rotated clockwise".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} has been slowly rotated clockwise".format(self._push_button, self._object)
         elif self._state == 26:
-            self._humanReadableLog = "Button {} of CEN+ object {} has been quickly rotated clockwise".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} has been quickly rotated clockwise".format(self._push_button, self._object)
         elif self._state == 27:
-            self._humanReadableLog = "Button {} of CEN+ object {} has been slowly rotated counter-clockwise".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} has been slowly rotated counter-clockwise".format(self._push_button, self._object)
         elif self._state == 28:
-            self._humanReadableLog = "Button {} of CEN+ object {} has been quickly rotated counter-clockwise".format(self._pushButton, self._object)
+            self._human_readable_log = "Button {} of CEN+ object {} has been quickly rotated counter-clockwise".format(self._push_button, self._object)
     
     @property
-    def isShortPressed(self):
+    def is_short_pressed(self):
         return self._state == 21
 
     @property
-    def isHeld(self):
+    def is_held(self):
         return self._state == 22
     
     @property
-    def isStillHeld(self):
+    def is_still_held(self):
         return self._state == 23
 
     @property
-    def isReleased(self):
+    def is_released(self):
         return self._state == 24
 
     @property
-    def isSlowlyTurnedCW(self):
+    def is_slowly_turned_CW(self):
         return self._state == 25
 
     @property
-    def isQuicklyTurnedCW(self):
+    def is_quickly_turned_CW(self):
         return self._state == 26
 
     @property
-    def isSlowlyTurnedCCW(self):
+    def is_slowly_turned_CCW(self):
         return self._state == 27
 
     @property
-    def isQuicklyTurnedCCW(self):
+    def is_quickly_turned_CCW(self):
         return self._state == 28
 
     @property
-    def humanReadableLog(self):
-        return self._humanReadableLog
-
+    def human_readable_log(self):
+        return self._human_readable_log
 
 class OWNCommand(OWNMessage):
     """ This class is a subclass of messages. All messages sent during a command session are commands.
@@ -742,19 +740,19 @@ class OWNCommand(OWNMessage):
         self._where = self._match.group('where')
 
     @classmethod
-    def raiseShutter(cls, _where):
+    def raise_shutter(cls, _where):
         return cls("*2*1*{}##".format(_where))
     
     @classmethod
-    def lowerShutter(cls, _where):
+    def lower_shutter(cls, _where):
         return cls("*2*2*{}##".format(_where))
 
     @classmethod
-    def stopShutter(cls, _where):
+    def stop_shutter(cls, _where):
         return cls("*2*0*{}##".format(_where))
 
     @classmethod
-    def setShutterTo(cls, _where, _level=30):
+    def set_shutter_level(cls, _where, _level=30):
         return cls("*#2*{}#11#001*{}##".format(_where, _level))
 
 class OWNLightingCommand(OWNCommand):
@@ -763,22 +761,22 @@ class OWNLightingCommand(OWNCommand):
         super().__init__(data)
 
     @classmethod
-    def switchON(cls, _where):
+    def switch_on(cls, _where):
         return cls("*1*1*{}##".format(_where))
 
     @classmethod
-    def switchOFF(cls, _where):
+    def switch_off(cls, _where):
         return cls("*1*0*{}##".format(_where))
 
     # @classmethod
-    # def setLightTo(cls, _where, _level=30):
+    # def set_light_to(cls, _where, _level=30):
     #     _level = round(_level/10)
     #     if _level == 1:
     #         _level = 2
     #     return cls("*1*{}*{}##".format(_level, _where))
 
     @classmethod
-    def setBrightness(cls, _where, _level=30):
+    def set_brightness(cls, _where, _level=30):
         _level = int(_level)+100
         return cls("*#1*{}#1*{}*2##".format(_where, _level))
 
@@ -816,7 +814,7 @@ class OWNSignaling(OWNMessage):
     @property
     def nonce(self):
         """ Return the authentication nonce IF the message is a nonce message """
-        if self.isNonce:
+        if self.is_nonce:
             return self._match.group(1)
         else:
             return None
@@ -824,19 +822,19 @@ class OWNSignaling(OWNMessage):
     @property
     def sha(self):
         """ Return the authentication SHA version IF the message is a SHA challenge message """
-        if self.isSHA:
+        if self.is_SHA:
             return self._match.group(1)
         else:
             return None
 
-    def isACK(self):
+    def is_ACK(self):
         return self._type == 'ACK'
 
-    def isNACK(self):
+    def is_NACK(self):
         return self._type == 'NACK'
 
-    def isNonce(self):
+    def is_nonce(self):
         return self._type == 'NONCE'
 
-    def isSHA(self):
+    def is_SHA(self):
         return self._type == 'SHA'

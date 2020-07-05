@@ -14,11 +14,8 @@ async def main(connection: OWNConnection):
         message = await connection.get_next()
         if message:
             logger.debug("Received: {}".format(message))
-            if message.isEvent():
-                print(message.humanReadableLog)
-
-async def close(connection: OWNConnection):
-    await connection.close()
+            if message.is_event():
+                print(message.human_readable_log)
 
 if __name__ == "__main__":
 
@@ -52,6 +49,7 @@ if __name__ == "__main__":
     try:
         logger.info("Starting OWNd")
         loop.run_forever()
+        #connection.send(OWNLightingCommand.switch_on(32))
     except KeyboardInterrupt:
         print("Stoping OWNd.")
         main_task.cancel()

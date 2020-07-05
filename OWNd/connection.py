@@ -48,16 +48,16 @@ class OWNConnection():
             await command_stream_writer.drain()
             raw_response = await command_stream_reader.readuntil(OWNConnection.SEPARATOR)
             resulting_message = OWNSignaling(raw_response.decode())
-            if resulting_message.isNACK():
+            if resulting_message.is_NACK():
                 command_stream_writer.write(message_string)
                 await command_stream_writer.drain()
                 raw_response = await command_stream_reader.readuntil(OWNConnection.SEPARATOR)
                 resulting_message = OWNSignaling(raw_response.decode())
-                if resulting_message.isNACK():
+                if resulting_message.is_NACK():
                     self._logger.error("Could not send message {}.".format(message))
-                elif resulting_message.isACK():
+                elif resulting_message.is_ACK():
                     self._logger.info("Message {} was successfully sent.".format(message))
-            elif resulting_message.isACK():
+            elif resulting_message.is_ACK():
                 self._logger.info("Message {} was successfully sent.".format(message))
             else:
                 self._logger.info("Message {} received response {}.".format(message,  resulting_message))
@@ -89,30 +89,30 @@ class OWNConnection():
         raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
         self._logger.debug("Response: {}".format(resulting_message))
-        if resulting_message.isNACK():
+        if resulting_message.is_NACK():
             self._logger.error("Error while opening {} session.".format("command" if is_command else "event"))
 
         raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
-        if resulting_message.isNACK():
+        if resulting_message.is_NACK():
             _error = True
             self._logger.error("Error while opening {} session.".format("command" if is_command else "event"))
-        elif resulting_message.isSHA():
+        elif resulting_message.is_SHA():
             _error = True
             self._logger.error("Error while opening {} session: HMAC authentication not supported.".format("command" if is_command else "event"))
-        elif resulting_message.isNonce():
+        elif resulting_message.is_nonce():
             hashedPass = "*#{}##".format(self._get_own_password(self._password, resulting_message.nonce))
             self._logger.info("Sending {} session password.".format("command" if is_command else "event"))
             writer.write(hashedPass.encode())
             await writer.drain()
             raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
             resulting_message = OWNSignaling(raw_response.decode())
-            if resulting_message.isNACK():
+            if resulting_message.is_NACK():
                 _error = True
                 self._logger.error("Password error while opening {} session.".format("command" if is_command else "event"))
-            elif resulting_message.isACK():
+            elif resulting_message.is_ACK():
                 self._logger.info("{} session established.".format("Command" if is_command else "Event"))
-        elif resulting_message.isACK():
+        elif resulting_message.is_ACK():
             self._logger.info("{} session established.".format("Command" if is_command else "Event"))
 
         return not _error
