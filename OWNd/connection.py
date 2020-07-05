@@ -1,6 +1,6 @@
 """ This module handles TCP connections to the OpenWebNet gateway """
 
-from message import *
+from OWNd.message import *
 import asyncio
 
 class OWNConnection():
@@ -24,7 +24,7 @@ class OWNConnection():
 
     async def connect(self):
 
-        self._logger.info("Opening event session...")
+        self._logger.info("Opening event session.")
         self._event_stream_reader, self._event_stream_writer = await asyncio.open_connection(self._address, self._port)
         await self._negociate(reader=self._event_stream_reader, writer=self._event_stream_writer, is_command=False)
 
@@ -38,7 +38,7 @@ class OWNConnection():
         """ Send the attached message on a new 'command' connection
         that  is then immediately closed """
 
-        self._logger.info("Opening command session...")
+        self._logger.info("Opening command session.")
 
         command_stream_reader, command_stream_writer = await asyncio.open_connection(self._address, self._port)
         message_string = str(message).encode()
@@ -88,7 +88,7 @@ class OWNConnection():
 
         raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
-        self._logger.debug("Response: {}".format(resulting_message))
+        self._logger.debug("Reply: {}".format(resulting_message))
         if resulting_message.is_NACK():
             self._logger.error("Error while opening {} session.".format("command" if is_command else "event"))
 
@@ -96,23 +96,28 @@ class OWNConnection():
         resulting_message = OWNSignaling(raw_response.decode())
         if resulting_message.is_NACK():
             _error = True
+            self._logger.debug("Reply: {}".format(resulting_message))
             self._logger.error("Error while opening {} session.".format("command" if is_command else "event"))
         elif resulting_message.is_SHA():
             _error = True
+            self._logger.info("Received SHA challenge: {}".format(resulting_message))
             self._logger.error("Error while opening {} session: HMAC authentication not supported.".format("command" if is_command else "event"))
         elif resulting_message.is_nonce():
+            self._logger.info("Received nonce: {}".format(resulting_message))
             hashedPass = "*#{}##".format(self._get_own_password(self._password, resulting_message.nonce))
             self._logger.info("Sending {} session password.".format("command" if is_command else "event"))
             writer.write(hashedPass.encode())
             await writer.drain()
             raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
             resulting_message = OWNSignaling(raw_response.decode())
+            self._logger.debug("Reply: {}".format(resulting_message))
             if resulting_message.is_NACK():
                 _error = True
                 self._logger.error("Password error while opening {} session.".format("command" if is_command else "event"))
             elif resulting_message.is_ACK():
                 self._logger.info("{} session established.".format("Command" if is_command else "Event"))
         elif resulting_message.is_ACK():
+            self._logger.debug("Reply: {}".format(resulting_message))
             self._logger.info("{} session established.".format("Command" if is_command else "Event"))
 
         return not _error
