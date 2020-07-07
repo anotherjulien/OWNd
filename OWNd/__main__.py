@@ -3,8 +3,8 @@ import logging
 import asyncio
 import argparse
 
-from OWNd.connection import OWNConnection
-from OWNd.message import *
+from connection import OWNConnection
+from message import *
 
 async def main(connection: OWNConnection):
     """ Package entry point! """
@@ -56,6 +56,7 @@ if __name__ == "__main__":
 
     if args.address is None:
         logger.critical("Please provide an IP address!")
+        address = None
         exit()
     else:
         address = args.address

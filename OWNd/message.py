@@ -714,8 +714,7 @@ class OWNCommand(OWNMessage):
 
     def __init__(self, data):
         self._raw = data
-        if self._human_readable_log is None:
-           self._human_readable_log = self._raw
+        self._human_readable_log = self._raw
 
         if self._STATUS.match(self._raw):
             self._match = self._STATUS.match(self._raw)

@@ -1,14 +1,16 @@
 """ This module handles TCP connections to the OpenWebNet gateway """
 
-from OWNd.message import *
+from message import *
 import asyncio
+import aiohttp
+import xml.etree.ElementTree as ET
 
 class OWNConnection():
     """ Connection to OpenWebNet gateway """
 
     SEPARATOR = '##'.encode()
 
-    def __init__(self, logger, address='192.168.1.35', port=20000, password='12345'):
+    def __init__(self, logger, address=None, port=None, password=None):
         """ Initialize the class
         Arguments:
         logger: instance of logging
@@ -22,6 +24,27 @@ class OWNConnection():
         self._password = password
         self._logger = logger
 
+    async def discover(self):
+
+        self._logger.info("Starting discovery.")
+        async with aiohttp.ClientSession() as session:
+            async with session.get("http://{}:49153".format(self._address)) as resp:
+                resp_text = await resp.text()
+                xml_root = ET.fromstring(resp_text)
+                for child in xml_root:
+                    for grand_child in child:
+                        if grand_child.tag.endswith("manufacturer"):
+                            self._manufacturer = grand_child.text
+                        elif grand_child.tag.endswith("manufacturerURL"):
+                            self._manufacturer_URL = grand_child.text
+                        elif grand_child.tag.endswith("modelName"):
+                            self._model_name = grand_child.text
+                        elif grand_child.tag.endswith("modelNumber"):
+                            self._firmware_version = grand_child.text
+                        elif grand_child.tag.endswith("serialNumber"):
+                            self._serial_number = grand_child.text
+            await session.close()
+
     async def test_connection(self) -> bool:
 
         event_stream_reader, event_stream_writer = await asyncio.open_connection(self._address, self._port)
@@ -31,8 +54,12 @@ class OWNConnection():
 
         return result
 
-
     async def connect(self):
+
+        await self.discover()
+
+        if self._serial_number is not None:
+            self._logger.info("{} server running firmware {} has serial {}.".format(self._model_name, self._firmware_version, self._serial_number))
 
         self._logger.info("Opening event session.")
         self._event_stream_reader, self._event_stream_writer = await asyncio.open_connection(self._address, self._port)
