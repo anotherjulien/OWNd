@@ -22,25 +22,46 @@ class OWNMessage():
     """ Base class for all OWN messages """
     def __init__(self, data):
         self._raw = data
+        self._human_readable_log = self._raw
 
-    def is_event(self):
+    def is_event(self) -> bool:
         return self._family == 'EVENT'
 
-    def is_command(self):
+    def is_command(self) -> bool:
         return self._family == 'COMMAND'
 
-    def is_request(self):
+    def is_request(self) -> bool:
         return self._family == 'REQUEST'
 
     @property
-    def entity(self):
-        """ The ID of the subject of this message """
-        return None
+    def who(self) -> str:
+        """ The 'who' ID of the subject of this message """
+        return self._who[1:] if self._who.startswith('#') else self._who
 
-    def __repr__(self):
+    @property
+    def where(self) -> str:
+        """ The 'where' ID of the subject of this message """
+        return self._where[1:] if self._where.startswith('#') else self._where
+
+    @property
+    def entity(self) -> str:
+        """ The ID of the subject of this message """
+        return self.unique_id
+
+    @property
+    def unique_id(self) -> str:
+        """ The ID of the subject of this message """
+        return "{}-{}".format(self.who, self.where)
+    
+    @property
+    def human_readable_log(self) -> str:
+        """ A human readable log of the event """
+        return self._human_readable_log
+
+    def __repr__(self) -> str:
         return self._raw
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self._raw
 
 class OWNEvent(OWNMessage):
@@ -141,6 +162,7 @@ class OWNScenarioEvent(OWNEvent):
 
         self._scenario = self._what
         self._control_panel = self._where
+        self._human_readable_log = "Scenario {} from control panel {} has been launched.".format(self._scenario, self._control_panel)
 
     @property
     def scenario(self):
@@ -149,10 +171,6 @@ class OWNScenarioEvent(OWNEvent):
     @property
     def controlPanel(self):
         return self._control_panel
-
-    @property
-    def human_readable_log(self):
-        return "Scenario {} from control panel {} has been launched.".format(self._scenario, self._control_panel)
 
 class OWNLightingEvent(OWNEvent):
 
@@ -221,10 +239,6 @@ class OWNLightingEvent(OWNEvent):
     @property
     def timer(self):
         return self._timer
-    
-    @property
-    def human_readable_log(self):
-        return self._human_readable_log
 
 class OWNAutomationEvent(OWNEvent):
     def __init__(self, data):
@@ -300,10 +314,6 @@ class OWNAutomationEvent(OWNEvent):
     @property
     def currentPosition(self):
         return self._position
-    
-    @property
-    def human_readable_log(self):
-        return self._human_readable_log
 
 class OWNHeatingEvent(OWNEvent):
 
@@ -412,10 +422,6 @@ class OWNAlarmEvent(OWNEvent):
     @property
     def is_alarm(self):
         return self._state_code == 12 or self._state_code == 15 or self._state_code == 16 or self._state_code == 17 or self._state_code == 31
-
-    @property
-    def human_readable_log(self):
-        return self._human_readable_log
             
 class OWNAuxEvent(OWNEvent):
 
@@ -458,11 +464,7 @@ class OWNAuxEvent(OWNEvent):
 
     @property
     def is_on(self):
-        return self._state == 1
-
-    @property
-    def human_readable_log(self):
-        return self._human_readable_log            
+        return self._state == 1      
 
 class OWNCENEvent(OWNEvent):
 
@@ -498,10 +500,6 @@ class OWNCENEvent(OWNEvent):
     def is_released_after_long_press(self):
         return int(self._state) == 2
 
-    @property
-    def human_readable_log(self):
-        return self._human_readable_log
-
 class OWNSceneEvent(OWNEvent):
 
     def __init__(self, data):
@@ -509,6 +507,17 @@ class OWNSceneEvent(OWNEvent):
 
         self._scene = self._where
         self._state = self._what
+
+        if self._state == 1:
+            _status = "started"
+        elif self._state == 2:
+            _status = "stoped"
+        elif self._state == 3:
+            _status = "enabled"
+        elif self._state == 4:
+            _status = "disabled"
+
+        self._human_readable_log = "Scene {} is {}.".format(self._scene, _status)
 
     @property
     def scenario(self):
@@ -535,19 +544,6 @@ class OWNSceneEvent(OWNEvent):
             return False
         else:
             return None
-
-    @property
-    def human_readable_log(self):
-        if self._state == 1:
-            _status = "started"
-        elif self._state == 2:
-            _status = "stoped"
-        elif self._state == 3:
-            _status = "enabled"
-        elif self._state == 4:
-            _status = "disabled"
-
-        return "Scene {} is {}.".format(self._scene, _status)
 
 class OWNEnergyEvent(OWNEvent):
     def __init__(self, data):
@@ -718,6 +714,8 @@ class OWNCommand(OWNMessage):
 
     def __init__(self, data):
         self._raw = data
+        if self._human_readable_log is None:
+           self._human_readable_log = self._raw
 
         if self._STATUS.match(self._raw):
             self._match = self._STATUS.match(self._raw)
@@ -739,22 +737,6 @@ class OWNCommand(OWNMessage):
         self._who = self._match.group('who')
         self._where = self._match.group('where')
 
-    @classmethod
-    def raise_shutter(cls, _where):
-        return cls("*2*1*{}##".format(_where))
-    
-    @classmethod
-    def lower_shutter(cls, _where):
-        return cls("*2*2*{}##".format(_where))
-
-    @classmethod
-    def stop_shutter(cls, _where):
-        return cls("*2*0*{}##".format(_where))
-
-    @classmethod
-    def set_shutter_level(cls, _where, _level=30):
-        return cls("*#2*{}#11#001*{}##".format(_where, _level))
-
 class OWNLightingCommand(OWNCommand):
 
     def __init__(self, data):
@@ -762,11 +744,15 @@ class OWNLightingCommand(OWNCommand):
 
     @classmethod
     def switch_on(cls, _where):
-        return cls("*1*1*{}##".format(_where))
+        message = cls("*1*1*{}##".format(_where))
+        message._human_readable_log = "Switching ON light or switch {}.".format(_where)
+        return message
 
     @classmethod
     def switch_off(cls, _where):
-        return cls("*1*0*{}##".format(_where))
+        message = cls("*1*0*{}##".format(_where))
+        message._human_readable_log = "Switching OFF light or switch {}.".format(_where)
+        return message
 
     # @classmethod
     # def set_light_to(cls, _where, _level=30):
@@ -777,8 +763,39 @@ class OWNLightingCommand(OWNCommand):
 
     @classmethod
     def set_brightness(cls, _where, _level=30):
-        _level = int(_level)+100
-        return cls("*#1*{}#1*{}*2##".format(_where, _level))
+        command_level = int(_level)+100
+        message = cls("*#1*{}#1*{}*2##".format(_where, command_level))
+        message._human_readable_log = "Setting light {} brightness to {}%.".format(_where, _level)
+        return message
+
+class OWNAutomationCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+    @classmethod
+    def raise_shutter(cls, _where):
+        message = cls("*2*1*{}##".format(_where))
+        message._human_readable_log = "Raising shutter {}.".format(_where)
+        return message
+    
+    @classmethod
+    def lower_shutter(cls, _where):
+        message = cls("*2*2*{}##".format(_where))
+        message._human_readable_log = "Lowering shutter {}.".format(_where)
+        return message
+
+    @classmethod
+    def stop_shutter(cls, _where):
+        message = cls("*2*0*{}##".format(_where))
+        message._human_readable_log = "Stoping shutter {}.".format(_where)
+        return message
+
+    @classmethod
+    def set_shutter_level(cls, _where, _level=30):
+        message = cls("*#2*{}#11#001*{}##".format(_where, _level))
+        message._human_readable_log = "Setting shutter {} position to {}%.".format(_where, _level)
+        return message
 
 class OWNSignaling(OWNMessage):
     """ This class is a subclass of messages. It is dedicated to signaling messages such as ACK or Authentication negotiation """
@@ -790,26 +807,32 @@ class OWNSignaling(OWNMessage):
             self._match = self._ACK.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'ACK'
+            self._human_readable_log = "ACK."
         elif self._NACK.match(self._raw):
             self._match = self._NACK.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'NACK'
+            self._human_readable_log = "NACK."
         elif self._NONCE.match(self._raw):
             self._match = self._NONCE.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'NONCE'
+            self._human_readable_log = "Nonce challenge received: {}.".format(self._match.group(1))
         elif self._SHA.match(self._raw):
             self._match = self._SHA.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'SHA'
+            self._human_readable_log = "SHA{} challenge received.".format("-1" if self._match.group(1) else "-256")
         elif self._COMMAND_SESSION.match(self._raw):
             self._match = self._COMMAND_SESSION.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'COMMAND_SESSION'
+            self._human_readable_log = "Command session requested."
         elif self._EVENT_SESSION.match(self._raw):
             self._match = self._EVENT_SESSION.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'EVENT_SESSION'
+            self._human_readable_log = "Event session requested."
 
     @property
     def nonce(self):
@@ -820,21 +843,21 @@ class OWNSignaling(OWNMessage):
             return None
 
     @property
-    def sha(self):
+    def sha_version(self):
         """ Return the authentication SHA version IF the message is a SHA challenge message """
         if self.is_SHA:
             return self._match.group(1)
         else:
             return None
 
-    def is_ACK(self):
+    def is_ACK(self) -> bool:
         return self._type == 'ACK'
 
-    def is_NACK(self):
+    def is_NACK(self) -> bool:
         return self._type == 'NACK'
 
-    def is_nonce(self):
+    def is_nonce(self) -> bool:
         return self._type == 'NONCE'
 
-    def is_SHA(self):
+    def is_SHA(self) -> bool:
         return self._type == 'SHA'

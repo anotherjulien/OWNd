@@ -2,6 +2,7 @@
 
 from OWNd.message import *
 import asyncio
+import arpreq
 
 class OWNConnection():
     """ Connection to OpenWebNet gateway """
@@ -21,6 +22,16 @@ class OWNConnection():
         self._port = int(port)
         self._password = password
         self._logger = logger
+
+    async def test_connection(self) -> bool:
+
+        event_stream_reader, event_stream_writer = await asyncio.open_connection(self._address, self._port)
+        result = await self._negociate(reader=event_stream_reader, writer=event_stream_writer, is_command=False)
+        event_stream_writer.close()
+        await event_stream_writer.wait_closed()
+
+        return result
+
 
     async def connect(self):
 
@@ -76,7 +87,7 @@ class OWNConnection():
         except asyncio.exceptions.IncompleteReadError:
             return None
     
-    async def _negociate(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, is_command = False):
+    async def _negociate(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, is_command = False) -> bool:
 
         _session_type = 0 if is_command else 1
         _error = False
