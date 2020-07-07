@@ -2,7 +2,6 @@
 
 from OWNd.message import *
 import asyncio
-import arpreq
 
 class OWNConnection():
     """ Connection to OpenWebNet gateway """
