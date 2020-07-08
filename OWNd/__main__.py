@@ -57,7 +57,8 @@ if __name__ == "__main__":
     if args.address is None:
         logger.critical("Please provide an IP address!")
         address = None
-        exit()
+        discovery = True
+        #exit()
     else:
         address = args.address
     
