@@ -3,27 +3,31 @@ import logging
 import asyncio
 import argparse
 
-from connection import OWNConnection
+from connection import OWNConnection, OWNGateway
 from message import *
+from discovery import find_gateways
 
-async def main(connection: OWNConnection):
+async def main(arguments: dict, connection: OWNConnection) -> None:
     """ Package entry point! """
+    address = arguments["address"] if "address" in arguments and isinstance(arguments["address"], str) else None
+    port = arguments["port"] if "port" in arguments and isinstance(arguments["port"], str) else None
+    password = arguments["password"] if "password" in arguments and isinstance(arguments["password"], str) else None
+    logger = arguments["logger"] if "logger" in arguments and isinstance(arguments["logger"], logging.Logger) else None
 
-    await connection.connect()
+    gateway = await OWNGateway.build_from_discovery_info({"address": address, "port": port})
+    connection.gateway = gateway
+    connection.password = password
+
+    if logger is not None:
+        connection.logger = logger
+        await connection.connect()
+
     while True:
         message = await connection.get_next()
         if message:
             logger.debug("Received: {}".format(message))
             if message.is_event():
                 logger.info(message.human_readable_log)
-
-async def office_on(connection: OWNConnection):
-    await asyncio.sleep(1)
-    await connection.send(OWNLightingCommand.switch_on(32))
-
-async def office_off(connection: OWNConnection):
-    await asyncio.sleep(2)
-    await connection.send(OWNLightingCommand.switch_off(32))
 
 if __name__ == "__main__":
 
@@ -54,46 +58,22 @@ if __name__ == "__main__":
     # add the handlers to the logger
     logger.addHandler(log_stream_handler)
 
-    if args.address is None:
-        logger.critical("Please provide an IP address!")
-        address = None
-        discovery = True
-        #exit()
-    else:
-        address = args.address
-    
-    if args.port is None:
-        logger.warning("Port was not provided, using default: 20000.")
-        port = 20000
-    else:
-        port = args.port
-    
-    if args.password is None:
-        logger.warning("No password was provided, default will be used only if required.")
-        password = 12345
-    else:
-        password = args.password
-
-    connection = OWNConnection(logger, address, port, password)
-    
-    main_task = asyncio.ensure_future(main(connection))
-    
-    switch_on_task = asyncio.ensure_future(office_on(connection))
-    switch_off_task = asyncio.ensure_future(office_off(connection))
+    connection = OWNConnection()
+    arguments = {"address": args.address, "port": args.port, "password": args.password, "logger": logger}
 
     loop = asyncio.get_event_loop()
+    main_task = asyncio.ensure_future(main(arguments, connection))
     #loop.set_debug(True)
 
     try:
         logger.info("Starting OWNd.")
         loop.run_forever()
+        #asyncio.run(main(arguments))
     except KeyboardInterrupt:
         logger.info("Stoping OWNd.")
         main_task.cancel()
         loop.run_until_complete(connection.close())
-        loop.run_until_complete(loop.shutdown_asyncgens())
         loop.stop()
         loop.close()
-        exit()
     finally:
         logger.info('OWNd stopped.')

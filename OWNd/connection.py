@@ -1,16 +1,65 @@
 """ This module handles TCP connections to the OpenWebNet gateway """
 
 from message import *
+from discovery import get_port, get_gateway, find_gateways
+
 import asyncio
-import aiohttp
-import xml.etree.ElementTree as ET
+import logging
+from urllib.parse import urlparse
+
+class OWNGateway():
+
+    def __init__(self, discovery_info: dict):
+        self.ssdp_location = discovery_info["ssdp_location"] if "ssdp_location" in discovery_info else None
+        self.ssdp_st = discovery_info["ssdp_st"] if "ssdp_st" in discovery_info else None
+        # Attributes for accessing info from retrieved UPnP device description
+        self.deviceType = discovery_info["deviceType"] if "deviceType" in discovery_info else None
+        self.friendlyName = discovery_info["friendlyName"] if "friendlyName" in discovery_info else None
+        self.manufacturer = discovery_info["manufacturer"] if "manufacturer" in discovery_info else None
+        self.manufacturerURL = discovery_info["manufacturerURL"] if "manufacturerURL" in discovery_info else None
+        self.modelName = discovery_info["modelName"] if "modelName" in discovery_info else None
+        self.modelNumber = discovery_info["modelNumber"] if "modelNumber" in discovery_info else None
+        self.presentationURL = discovery_info["presentationURL"] if "presentationURL" in discovery_info else None
+        self.serialNumber = discovery_info["serialNumber"] if "serialNumber" in discovery_info else None
+        self.UDN = discovery_info["UDN"] if "UDN" in discovery_info else None
+        self.address = discovery_info["address"] if "address" in discovery_info else None
+        self.port = discovery_info["port"] if "port" in discovery_info else None
+
+
+    @classmethod
+    async def get_first_available_gateway(cls):
+        local_gateways = await find_gateways()
+        return cls(local_gateways[0])
+
+    @classmethod
+    async def build_from_discovery_info(cls, discovery_info: dict):
+
+        if "address" in discovery_info and discovery_info["address"] is None and "ssdp_location" in discovery_info and discovery_info["ssdp_location"] is not None:
+            discovery_info["address"] = urlparse(discovery_info["ssdp_location"]).hostname
+        
+        if "port" in discovery_info and discovery_info["port"] is None:
+            if "ssdp_location" in discovery_info and discovery_info["ssdp_location"] is not None:
+                discovery_info["port"] = await get_port(discovery_info["ssdp_location"])
+            elif "address" in discovery_info and discovery_info["address"] is not None:
+                return await build_from_address(discovery_info["address"])
+            else:
+                return await cls.get_first_available_gateway()
+
+        return cls(discovery_info)
+
+    @classmethod
+    async def build_from_address(cls, address: str):
+        if address is not None:
+            return cls(await get_gateway(address))
+        else:
+            return await get_first_available_gateway()
 
 class OWNConnection():
     """ Connection to OpenWebNet gateway """
 
     SEPARATOR = '##'.encode()
 
-    def __init__(self, logger, address=None, port=None, password=None):
+    def __init__(self, gateway: OWNGateway = None, password: str = None):
         """ Initialize the class
         Arguments:
         logger: instance of logging
@@ -18,32 +67,34 @@ class OWNConnection():
         port: TCP port for the connection
         password: OpenWebNet password
         """
-
-        self._address = address
-        self._port = int(port)
+        
+        self._gateway = gateway
         self._password = password
+        self._logger = None
+
+    @property
+    def gateway(self) -> OWNGateway:
+        return self._gateway
+
+    @gateway.setter
+    def gateway(self, gateway: OWNGateway) -> None:
+        self._gateway = gateway
+
+    @property
+    def password(self) -> str:
+        return self._password
+
+    @password.setter
+    def password(self, password: str) -> None:
+        self._password = password
+
+    @property
+    def logger(self) -> logging.Logger:
+        return self._logger
+
+    @logger.setter
+    def logger(self, logger: logging.Logger) -> None:
         self._logger = logger
-
-    async def discover(self):
-
-        self._logger.info("Starting discovery.")
-        async with aiohttp.ClientSession() as session:
-            async with session.get("http://{}:49153".format(self._address)) as resp:
-                resp_text = await resp.text()
-                xml_root = ET.fromstring(resp_text)
-                for child in xml_root:
-                    for grand_child in child:
-                        if grand_child.tag.endswith("manufacturer"):
-                            self._manufacturer = grand_child.text
-                        elif grand_child.tag.endswith("manufacturerURL"):
-                            self._manufacturer_URL = grand_child.text
-                        elif grand_child.tag.endswith("modelName"):
-                            self._model_name = grand_child.text
-                        elif grand_child.tag.endswith("modelNumber"):
-                            self._firmware_version = grand_child.text
-                        elif grand_child.tag.endswith("serialNumber"):
-                            self._serial_number = grand_child.text
-            await session.close()
 
     async def test_connection(self) -> bool:
 
@@ -56,13 +107,11 @@ class OWNConnection():
 
     async def connect(self):
 
-        await self.discover()
-
-        if self._serial_number is not None:
-            self._logger.info("{} server running firmware {} has serial {}.".format(self._model_name, self._firmware_version, self._serial_number))
+        if self._gateway.serialNumber is not None:
+            self._logger.info("{} server running firmware {} has serial {}.".format(self._gateway.modelName, self._gateway.modelNumber, self._gateway.serialNumber))
 
         self._logger.info("Opening event session.")
-        self._event_stream_reader, self._event_stream_writer = await asyncio.open_connection(self._address, self._port)
+        self._event_stream_reader, self._event_stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
         await self._negociate(reader=self._event_stream_reader, writer=self._event_stream_writer, is_command=False)
 
     async def close(self):
@@ -74,6 +123,9 @@ class OWNConnection():
     async def send(self, message):
         """ Send the attached message on a new 'command' connection
         that  is then immediately closed """
+
+        while not self.is_ready:
+            await asyncio.sleep(0.5)
 
         self._logger.info("Opening command session.")
 
@@ -141,7 +193,11 @@ class OWNConnection():
             self._logger.error("Error while opening {} session: HMAC authentication not supported.".format("command" if is_command else "event"))
         elif resulting_message.is_nonce():
             self._logger.info("Received nonce: {}".format(resulting_message))
-            hashedPass = "*#{}##".format(self._get_own_password(self._password, resulting_message.nonce))
+            if self._password is None:
+                self._logger.warning("Connection requires a password but none was provided, trying default.")
+                hashedPass = "*#{}##".format(self._get_own_password(12345, resulting_message.nonce))
+            else:
+                hashedPass = "*#{}##".format(self._get_own_password(self._password, resulting_message.nonce))
             self._logger.info("Sending {} session password.".format("command" if is_command else "event"))
             writer.write(hashedPass.encode())
             await writer.drain()
