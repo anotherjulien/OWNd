@@ -1,11 +1,13 @@
-import time
-import logging
-import asyncio
 import argparse
+import asyncio
+import logging
+import time
 
-from connection import OWNGateway, OWNSession, OWNEventSession, OWNCommandSession
-from message import *
-from discovery import find_gateways
+from OWNd.connection import (OWNCommandSession, OWNEventSession, OWNGateway,
+                             OWNSession)
+from OWNd.discovery import find_gateways
+from OWNd.message import *
+
 
 async def main(arguments: dict, connection: OWNEventSession) -> None:
     """ Package entry point! """
@@ -26,7 +28,7 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
     while True:
         message = await connection.get_next()
         if message:
-            logger.debug("Received: {}".format(message))
+            logger.debug("Received: %s", message)
             if message.is_event():
                 logger.info(message.human_readable_log)
 

@@ -1,11 +1,14 @@
 import asyncio
-import aiohttp
 import email.parser
 import errno
 import logging
 import socket
 import xml.dom.minidom
-from connection import OWNGateway
+
+import aiohttp
+
+from OWNd.connection import OWNGateway
+
 
 class SSDPMessage:
     """Simplified HTTP message to serve as a SSDP message."""
@@ -150,7 +153,7 @@ class SimpleServiceDiscoveryProtocol(asyncio.DatagramProtocol):
             self._transport = None
 
 def _get_soap_body(ns: str, action: str) -> str:
-    soap_body = """
+    soap_body = f"""
         <?xml version="1.0"?>
 
         <soap:Envelope
@@ -158,12 +161,12 @@ def _get_soap_body(ns: str, action: str) -> str:
         soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding">
 
         <soap:Body>
-        <m:{1} xmlns:m="{0}">
-        </m:{1}>
+        <m:{action} xmlns:m="{ns}">
+        </m:{action}>
         </soap:Body>
 
         </soap:Envelope>
-    """.format(ns, action)
+    """
     return soap_body
 
 async def get_port(SCPD_location: str) -> int:
@@ -174,15 +177,15 @@ async def get_port(SCPD_location: str) -> int:
         service_action = "getopenserverPort"
         service_control = "upnp/pwdControl"
         soap_body = _get_soap_body(service_ns, service_action)
-        soap_action = "{}#{}".format(service_ns, service_action)
+        soap_action = f"{service_ns}#{service_action}"
         headers = {
-            'SOAPAction': '"{}"'.format(soap_action),
-            'Host': "{}".format(SCPD_location[7:-1]),
+            'SOAPAction': f'"{soap_action}"',
+            'Host': f"{SCPD_location[7:-1]}",
             'Content-Type': 'text/xml',
             'Content-Length': str(len(soap_body)),
         }
 
-        ctrl_url = "{}{}".format(SCPD_location, service_control)
+        ctrl_url = f"{SCPD_location}{service_control}"
         resp = await session.post(ctrl_url, data=soap_body, headers=headers)
         soap_response = xml.dom.minidom.parseString(await resp.text()).documentElement
         await session.close()
@@ -268,10 +271,10 @@ if __name__ == "__main__":
     local_gateways = asyncio.run(find_gateways())
 
     for gateway in local_gateways:
-        print("Address: {}".format(gateway["address"]))
-        print("Port: {}".format(gateway["port"]))
-        print("Manufacturer: {}".format(gateway["manufacturer"]))
-        print("Model: {}".format(gateway["modelName"]))
-        print("Firmware: {}".format(gateway["modelNumber"]))
-        print("Serial: {}".format(gateway["serialNumber"]))
+        print(f"Address: {gateway['address']}")
+        print(f"Port: {gateway['port']}")
+        print(f"Manufacturer: {gateway['manufacturer']}")
+        print(f"Model: {gateway['modelName']}")
+        print(f"Firmware: {gateway['modelNumber']}")
+        print(f"Serial: {gateway['serialNumber']}")
         print()

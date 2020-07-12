@@ -1,7 +1,7 @@
 """ This module contains OpenWebNet messages definition """
 
-import re
 import datetime
+import re
 
 
 class OWNMessage():
@@ -51,7 +51,7 @@ class OWNMessage():
     @property
     def unique_id(self) -> str:
         """ The ID of the subject of this message """
-        return "{}-{}".format(self.who, self.where)
+        return f"{self.who}-{self.where}"
     
     @property
     def human_readable_log(self) -> str:
@@ -162,7 +162,7 @@ class OWNScenarioEvent(OWNEvent):
 
         self._scenario = self._what
         self._control_panel = self._where
-        self._human_readable_log = "Scenario {} from control panel {} has been launched.".format(self._scenario, self._control_panel)
+        self._human_readable_log = f"Scenario {self._scenario} from control panel {self._control_panel} has been launched."
 
     @property
     def scenario(self):
@@ -184,49 +184,49 @@ class OWNLightingEvent(OWNEvent):
         if self._what is not None and self._what != 1000:
             self._state = self._what
             if self._state == 0:
-                self._human_readable_log = "Light {} is switched off.".format(self._where)
+                self._human_readable_log = f"Light {self._where} is switched off."
             elif self._state == 1:
-                self._human_readable_log = "Light {} is switched on.".format(self._where)
+                self._human_readable_log = f"Light {self._where} is switched on."
             elif self._state > 1 and self._state < 11:
                 self._brightness = self._state * 10
-                self._human_readable_log = "Light {} is switched on at {}%.".format(self._where, self._bightness)
+                self._human_readable_log = f"Light {self._where} is switched on at {self._bightness}%."
             elif self._state == 11:
                 self._timer = 60
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
             elif self._state == 12:
                 self._timer = 120
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
             elif self._state == 13:
                 self._timer = 180
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
             elif self._state == 14:
                 self._timer = 240
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
             elif self._state == 15:
                 self._timer = 300
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
             elif self._state == 16:
                 self._timer = 900
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
             elif self._state == 17:
                 self._timer = 30
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
             elif self._state == 18:
                 self._timer = 0.5
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
         
         if self._dimension is not None:
             if self._dimension == 1:
                 self._brightness = int(self._dimension_value[0]) - 100
                 if self._brightness == 0:
                     self._state = 0
-                    self._human_readable_log = "Light {} is switched off.".format(self._where)
+                    self._human_readable_log = f"Light {self._where} is switched off."
                 else:
                     self._state = 1
-                    self._human_readable_log = "Light {} is switched on at {}%.".format(self._where, self._bightness)
+                    self._human_readable_log = f"Light {self._where} is switched on at {self._bightness}%."
             elif self._dimension == 2:
                 self._timer = int(self._dimension_value[0])*3600 + int(self._dimension_value[1])*60 + int(self._dimension_value[2])
-                self._human_readable_log = "Light {} is switched on for {}s.".format(self._where, self._timer)
+                self._human_readable_log = "Light {self._where} is switched on for {self._timer}s."
 
     @property
     def brightness(self):
@@ -263,34 +263,34 @@ class OWNAutomationEvent(OWNEvent):
                 self._info = int(self._dimension_value[3])
 
         if self._state == 0:
-            self._human_readable_log = "Cover {} stopped.".format(self._where)
+            self._human_readable_log = f"Cover {self._where} stopped."
             self._is_opening = False
             self._is_closing = False
         elif self._state == 10:
             self._is_opening = False
             self._is_closing = False
             if self._position == 0:
-                self._human_readable_log = "Cover {} is closed.".format(self._where)
+                self._human_readable_log = f"Cover {self._where} is closed."
                 self._is_closed = True
             else:
-                self._human_readable_log = "Cover {} is opened at {}%.".format(self._where, self._position)
+                self._human_readable_log = f"Cover {self._where} is opened at {self._position}%."
                 self._is_closed = False
         else:
             if self._state == 1:
-                self._human_readable_log = "Cover {} is opening.".format(self._where)
+                self._human_readable_log = f"Cover {self._where} is opening."
                 self._is_opening = True
                 self._is_closing = False
             elif self._state == 11 or  self._state == 13:
-                self._human_readable_log = "Cover {} is opening from intial position {}.".format(self._where, self._position)
+                self._human_readable_log = f"Cover {self._where} is opening from intial position {self._position}."
                 self._is_opening = True
                 self._is_closing = False
                 self._is_closed = False
             elif self._state == 2:
-                self._human_readable_log = "Cover {} is closing.".format(self._where)
+                self._human_readable_log = f"Cover {self._where} is closing."
                 self._is_closing = True
                 self._is_opening = False
             elif self._state == 12 or self._state == 14:
-                self._human_readable_log = "Cover {} is closing from intial position {}.".format(self._where, self._position)
+                self._human_readable_log = f"Cover {self._where} is closing from intial position {self._position}."
                 self._is_closing = True
                 self._is_opening = False
                 self._is_closed = False
@@ -343,14 +343,14 @@ class OWNAlarmEvent(OWNEvent):
             else:
                 self._sensor = int(self._zone[1:])
                 self._zone = int(self._zone[0])
-            self._human_readable_log = "Zone {} is reporting: ".format(self._zone)
+            self._human_readable_log = f"Zone {self._zone} is reporting: "
         else:
             self._zone = int(self._where[0])
             self._sensor = int(self._where[1:])
             if self._zone == 0 :
-                self._human_readable_log = "Device {} in input zone is reporting: ".format(self._sensor)
+                self._human_readable_log = f"Device {self._sensor} in input zone is reporting: "
             else:
-                self._human_readable_log = "Sensor {} in zone {} is reporting: ".format(self._sensor, self._zone)
+                self._human_readable_log = f"Sensor {self._sensor} in zone {self._zone} is reporting: "
 
         if self._state_code == 0:
             self._state = 'maintenance'
@@ -397,7 +397,7 @@ class OWNAlarmEvent(OWNEvent):
         elif self._state_code == 31:
             self._state = 'silent alarm'
 
-        self._human_readable_log = self._human_readable_log + "'{}'.".format(self._state)
+        self._human_readable_log = f"{self._human_readable_log}'{self._state}'."
 
     @property
     def general(self):
@@ -432,27 +432,27 @@ class OWNAuxEvent(OWNEvent):
 
         self._state = self._what
         if self._state == 0:
-            self._human_readable_log = "Auxilliary channel {} is set to 'OFF'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'OFF'."
         elif self._state == 1:
-            self._human_readable_log = "Auxilliary channel {} is set to 'ON'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'ON'."
         elif self._state == 2:
-            self._human_readable_log = "Auxilliary channel {} is set to 'TOGGLE'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'TOGGLE'."
         elif self._state == 3:
-            self._human_readable_log = "Auxilliary channel {} is set to 'STOP'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'STOP'."
         elif self._state == 4:
-            self._human_readable_log = "Auxilliary channel {} is set to 'UP'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'UP'."
         elif self._state == 5:
-            self._human_readable_log = "Auxilliary channel {} is set to 'DOWN'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'DOWN'."
         elif self._state == 6:
-            self._human_readable_log = "Auxilliary channel {} is set to 'ENABLED'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'ENABLED'."
         elif self._state == 7:
-            self._human_readable_log = "Auxilliary channel {} is set to 'DISABLED'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'DISABLED'."
         elif self._state == 8:
-            self._human_readable_log = "Auxilliary channel {} is set to 'RESET_GEN'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'RESET_GEN'."
         elif self._state == 9:
-            self._human_readable_log = "Auxilliary channel {} is set to 'RESET_BI'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'RESET_BI'."
         elif self._state == 10:
-            self._human_readable_log = "Auxilliary channel {} is set to 'RESET_TRI'.".format(self._channel)
+            self._human_readable_log = f"Auxilliary channel {self._channel} is set to 'RESET_TRI'."
 
     @property
     def channel(self):
@@ -476,13 +476,13 @@ class OWNCENEvent(OWNEvent):
         self._object = self._where
 
         if self._state == None:
-            self._human_readable_log = "Button {} of CEN object {} has been pressed.".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} has been pressed."
         elif int(self._state) == 3:
-            self._human_readable_log = "Button {} of CEN object {} is being held pressed.".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} is being held pressed."
         elif int(self._state) == 1:
-            self._human_readable_log = "Button {} of CEN object {} has been released after a short press.".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} has been released after a short press."
         elif int(self._state) == 2:
-            self._human_readable_log = "Button {} of CEN object {} has been released after a long press.".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} has been released after a long press."
 
     @property
     def is_pressed(self):
@@ -517,7 +517,7 @@ class OWNSceneEvent(OWNEvent):
         elif self._state == 4:
             _status = "disabled"
 
-        self._human_readable_log = "Scene {} is {}.".format(self._scene, _status)
+        self._human_readable_log = f"Scene {self._scene} is {_status}."
 
     @property
     def scenario(self):
@@ -563,7 +563,7 @@ class OWNEnergyEvent(OWNEvent):
         if self._dimension is not None:
             if self._dimension == 113:
                 self._active_power = int(self._dimension_value[0])
-                self._human_readable_log = "Sensor {} is reporting an active power draw of {} W.".format(self._sensor, self._active_power)
+                self._human_readable_log = f"Sensor {self._sensor} is reporting an active power draw of {self._active_power} W."
             elif self._dimension == 511:
                 _now = datetime.date.today()
                 _messageDate =  datetime.date(_now.year, int(self._dimension_param[0]), int(self._dimension_param[1]))
@@ -574,23 +574,23 @@ class OWNEnergyEvent(OWNEvent):
                     self._hourly_consumption['date'] = _messageDate
                     self._hourly_consumption['hour'] = int(self._dimension_value[0])
                     self._hourly_consumption['value'] = int(self._dimension_value[1])
-                    self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh for {} at {}.".format(self._sensor, self._hourly_consumption['value'], self._hourly_consumption['date'], self._hourly_consumption['hour'])
+                    self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._hourly_consumption['value']} Wh for {self._hourly_consumption['date']} at {self._hourly_consumption['hour']}."
                 else:
-                    self._hourly_consumption['date'] = _messageDate
+                    self._daily_consumption['date'] = _messageDate
                     self._daily_consumption['value'] = int(self._dimension_value[1])
-                    self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._hourly_consumption['value'], self._hourly_consumption['date'])
+                    self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._daily_consumption['value']} Wh for {self._daily_consumption['date']}."
                     
             elif self._dimension == 54:
                 self._current_day_partial_consumption = int(self._dimension_value[0])
-                self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh up to now today.".format(self._sensor, self._hourly_consumption['value'])
+                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_day_partial_consumption['value']} Wh up to now today."
             elif self._dimension == 52:
                 _messageDate =  datetime.date(int("20" + str(self._dimension_param[0])), self._dimension_param[1], 1)
                 self._monthly_consumption['date'] = _messageDate
                 self._monthly_consumption['value'] = int(self._dimension_value[0])
-                self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh for {}.".format(self._sensor, self._monthly_consumption['value'], self._monthly_consumption['date'].strftime("%B %Y"))
+                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._monthly_consumption['value']} Wh for {self._monthly_consumption['date'].strftime('%B %Y')}."
             elif self._dimension == 53:
                 self._current_month_partial_consumption = int(self._dimension_value[0])
-                self._human_readable_log = "Sensor {} is reporting a power consumtion of {} Wh up to now this month.".format(self._sensor, self._current_month_partial_consumption['value'])
+                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_month_partial_consumption['value']} Wh up to now this month."
 
     @property
     def active_power(self):
@@ -630,9 +630,9 @@ class OWNDryContactEvent(OWNEvent):
         self._sensor = self._where[1:]
 
         if self._detection == 1:
-            self._human_readable_log = "Sensor {} detected {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
+            self._human_readable_log = f"Sensor {self._sensor} detected {'ON' if self._state == 1 else 'OFF'}."
         else:
-            self._human_readable_log = "Sensor {} reported {}.".format(self._sensor, "ON" if self._state == 1 else "OFF")
+            self._human_readable_log = f"Sensor {self._sensor} reported {'ON' if self._state == 1 else 'OFF'}."
 
     @property
     def is_on(self):
@@ -656,21 +656,21 @@ class OWNCENPlusEvent(OWNEvent):
         self._object = self._where[1:]
 
         if self._state == 21:
-            self._human_readable_log = "Button {} of CEN+ object {} has been pressed".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been pressed"
         elif self._state == 22:
-            self._human_readable_log = "Button {} of CEN+ object {} is being held pressed".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} is being held pressed"
         elif self._state == 23:
-            self._human_readable_log = "Button {} of CEN+ object {} is still being held pressed".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} is still being held pressed"
         elif self._state == 24:
-            self._human_readable_log = "Button {} of CEN+ object {} has been released".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been released"
         elif self._state == 25:
-            self._human_readable_log = "Button {} of CEN+ object {} has been slowly rotated clockwise".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been slowly rotated clockwise"
         elif self._state == 26:
-            self._human_readable_log = "Button {} of CEN+ object {} has been quickly rotated clockwise".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been quickly rotated clockwise"
         elif self._state == 27:
-            self._human_readable_log = "Button {} of CEN+ object {} has been slowly rotated counter-clockwise".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been slowly rotated counter-clockwise"
         elif self._state == 28:
-            self._human_readable_log = "Button {} of CEN+ object {} has been quickly rotated counter-clockwise".format(self._push_button, self._object)
+            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been quickly rotated counter-clockwise"
     
     @property
     def is_short_pressed(self):
@@ -743,28 +743,21 @@ class OWNLightingCommand(OWNCommand):
 
     @classmethod
     def switch_on(cls, _where):
-        message = cls("*1*1*{}##".format(_where))
-        message._human_readable_log = "Switching ON light or switch {}.".format(_where)
+        message = cls(f"*1*1*{_where}##")
+        message._human_readable_log = f"Switching ON light or switch {_where}."
         return message
 
     @classmethod
     def switch_off(cls, _where):
-        message = cls("*1*0*{}##".format(_where))
-        message._human_readable_log = "Switching OFF light or switch {}.".format(_where)
+        message = cls(f"*1*0*{_where}##")
+        message._human_readable_log = f"Switching OFF light or switch {_where}."
         return message
-
-    # @classmethod
-    # def set_light_to(cls, _where, _level=30):
-    #     _level = round(_level/10)
-    #     if _level == 1:
-    #         _level = 2
-    #     return cls("*1*{}*{}##".format(_level, _where))
 
     @classmethod
     def set_brightness(cls, _where, _level=30):
         command_level = int(_level)+100
-        message = cls("*#1*{}#1*{}*2##".format(_where, command_level))
-        message._human_readable_log = "Setting light {} brightness to {}%.".format(_where, _level)
+        message = cls(f"*#1*{_where}#1*{command_level}*2##")
+        message._human_readable_log = f"Setting light {_where} brightness to {_level}%."
         return message
 
 class OWNAutomationCommand(OWNCommand):
@@ -774,26 +767,26 @@ class OWNAutomationCommand(OWNCommand):
 
     @classmethod
     def raise_shutter(cls, _where):
-        message = cls("*2*1*{}##".format(_where))
-        message._human_readable_log = "Raising shutter {}.".format(_where)
+        message = cls(f"*2*1*{_where}##")
+        message._human_readable_log = f"Raising shutter {_where}."
         return message
     
     @classmethod
     def lower_shutter(cls, _where):
-        message = cls("*2*2*{}##".format(_where))
-        message._human_readable_log = "Lowering shutter {}.".format(_where)
+        message = cls(f"*2*2*{_where}##")
+        message._human_readable_log = f"Lowering shutter {_where}."
         return message
 
     @classmethod
     def stop_shutter(cls, _where):
-        message = cls("*2*0*{}##".format(_where))
-        message._human_readable_log = "Stoping shutter {}.".format(_where)
+        message = cls(f"*2*0*{_where}##")
+        message._human_readable_log = f"Stoping shutter {_where}."
         return message
 
     @classmethod
     def set_shutter_level(cls, _where, _level=30):
-        message = cls("*#2*{}#11#001*{}##".format(_where, _level))
-        message._human_readable_log = "Setting shutter {} position to {}%.".format(_where, _level)
+        message = cls(f"*#2*{_where}#11#001*{_level}##")
+        message._human_readable_log = f"Setting shutter {_where} position to {_level}%."
         return message
 
 class OWNSignaling(OWNMessage):
@@ -816,12 +809,12 @@ class OWNSignaling(OWNMessage):
             self._match = self._NONCE.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'NONCE'
-            self._human_readable_log = "Nonce challenge received: {}.".format(self._match.group(1))
+            self._human_readable_log = f"Nonce challenge received: {self._match.group(1)}."
         elif self._SHA.match(self._raw):
             self._match = self._SHA.match(self._raw)
             self._family = 'SIGNALING'
             self._type = 'SHA'
-            self._human_readable_log = "SHA{} challenge received.".format("-1" if self._match.group(1) else "-256")
+            self._human_readable_log = f"SHA{'-1' if self._match.group(1) else '-256'} challenge received."
         elif self._COMMAND_SESSION.match(self._raw):
             self._match = self._COMMAND_SESSION.match(self._raw)
             self._family = 'SIGNALING'

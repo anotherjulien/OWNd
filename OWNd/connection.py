@@ -1,11 +1,12 @@
 """ This module handles TCP connections to the OpenWebNet gateway """
 
-from message import *
-from discovery import get_port, get_gateway, find_gateways
-
 import asyncio
 import logging
 from urllib.parse import urlparse
+
+from OWNd.discovery import find_gateways, get_gateway, get_port
+from OWNd.message import *
+
 
 class OWNGateway():
 
@@ -168,7 +169,7 @@ class OWNSession():
         """ Closes the event connection to the OpenWebNet gateway """
         self._stream_writer.close()
         await self._stream_writer.wait_closed()
-        self._logger.info("{} session closed.".format(self._type.capitalize()))
+        self._logger.info("%s session closed.", self._type.capitalize())
     
     async def _negotiate(self) -> dict:
 
@@ -178,16 +179,16 @@ class OWNSession():
         default_password = "12345"
         default_password_used = False
 
-        self._logger.info("Negotiating {} session.".format(self._type))
+        self._logger.info("Negotiating %s session.", self._type)
 
-        self._stream_writer.write("*99*{}##".format(type_id).encode())
+        self._stream_writer.write(f"*99*{type_id}##".encode())
         await self._stream_writer.drain()
 
         raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
-        self._logger.debug("Reply: {}".format(resulting_message))
+        self._logger.debug("Reply: %s", resulting_message)
         if resulting_message.is_NACK():
-            self._logger.error("Error while opening {} session.".format(self._type))
+            self._logger.error("Error while opening %s session.", self._type)
             error = True
             error_message = "connection_refused"
 
@@ -196,41 +197,41 @@ class OWNSession():
         if resulting_message.is_NACK():
             error = True
             error_message = "negotiation_refused"
-            self._logger.debug("Reply: {}".format(resulting_message))
-            self._logger.error("Error while opening {} session.".format(self._type))
+            self._logger.debug("Reply: %s", resulting_message)
+            self._logger.error("Error while opening %s session.", self._type)
         elif resulting_message.is_SHA():
             error = True
             error_message = "unsupported_authentication"
-            self._logger.info("Received SHA challenge: {}".format(resulting_message))
-            self._logger.error("Error while opening {} session: HMAC authentication not supported.".format(self._type))
+            self._logger.info("Received SHA challenge: %s", resulting_message)
+            self._logger.error("Error while opening %s session: HMAC authentication not supported.", self._type)
         elif resulting_message.is_nonce():
-            self._logger.info("Received nonce: {}".format(resulting_message))
+            self._logger.info("Received nonce: %s", resulting_message)
             if self._gateway.password is None:
                 error_message = "password_required"
                 self._logger.warning("Connection requires a password but none was provided, trying default.")
                 default_password_used = True
-                hashedPass = "*#{}##".format(self._get_own_password(default_password, resulting_message.nonce))
+                hashedPass = f"*#{self._get_own_password(default_password, resulting_message.nonce)}##"
             else:
-                hashedPass = "*#{}##".format(self._get_own_password(self._gateway.password, resulting_message.nonce))
-            self._logger.info("Sending {} session password.".format(self._type))
+                hashedPass = f"*#{self._get_own_password(self._gateway.password, resulting_message.nonce)}##"
+            self._logger.info("Sending %s session password.", self._type)
             self._stream_writer.write(hashedPass.encode())
             await self._stream_writer.drain()
             raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             resulting_message = OWNSignaling(raw_response.decode())
-            self._logger.debug("Reply: {}".format(resulting_message))
+            self._logger.debug("Reply: %s", resulting_message)
             if resulting_message.is_NACK():
                 error = True
                 if error_message != "password_required":
                     error_message = "password_error"
-                self._logger.error("Password error while opening {} session.".format(self._type))
+                self._logger.error("Password error while opening %s session.", self._type)
             elif resulting_message.is_ACK():
                 if default_password_used:
                     error_message = "default_password"
                     self._gateway.password = default_password
-                self._logger.info("{} session established.".format(self._type.capitalize()))
+                self._logger.info("%s session established.", self._type.capitalize())
         elif resulting_message.is_ACK():
-            self._logger.debug("Reply: {}".format(resulting_message))
-            self._logger.info("{} session established.".format("Command" if is_command else "Event"))
+            self._logger.debug("Reply: %s", resulting_message)
+            self._logger.info("%s session established.", self._type.capitalize())
 
         return {"Success": not error, "Message": error_message}
 
@@ -297,10 +298,6 @@ class OWNEventSession(OWNSession):
         await connection.connect
 
     async def connect(self):
-
-        if self._gateway.serialNumber is not None:
-            self._logger.info("{} server running firmware {} has serial {}.".format(self._gateway.modelName, self._gateway.modelNumber, self._gateway.serialNumber))
-
         self._logger.info("Opening event session.")
         self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
         await self._negotiate()
@@ -351,13 +348,13 @@ class OWNCommandSession(OWNSession):
                 raw_response = await command_stream_reader.readuntil(OWNSession.SEPARATOR)
                 resulting_message = OWNSignaling(raw_response.decode())
                 if resulting_message.is_NACK():
-                    self._logger.error("Could not send message {}.".format(message))
+                    self._logger.error("Could not send message %s.", message)
                 elif resulting_message.is_ACK():
-                    self._logger.info("Message {} was successfully sent.".format(message))
+                    self._logger.info("Message %s was successfully sent.", message)
             elif resulting_message.is_ACK():
-                self._logger.info("Message {} was successfully sent.".format(message))
+                self._logger.info("Message %s was successfully sent.", message)
             else:
-                self._logger.info("Message {} received response {}.".format(message,  resulting_message))
+                self._logger.info("Message %s received response %s.", message,  resulting_message)
 
         command_stream_writer.close()
         await command_stream_writer.wait_closed()
