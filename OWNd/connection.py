@@ -159,7 +159,7 @@ class OWNSession():
     async def test_connection(self) -> dict:
 
         self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
-        result = await self._negociate(is_command=False)
+        result = await self._negotiate(is_command=False)
         await self.close()
 
         return result
@@ -170,7 +170,7 @@ class OWNSession():
         await self._stream_writer.wait_closed()
         self._logger.info("{} session closed.".format(self._type.capitalize()))
     
-    async def _negociate(self) -> dict:
+    async def _negotiate(self) -> dict:
 
         type_id = 0 if self._type == "command" else 1
         error = False
@@ -178,7 +178,7 @@ class OWNSession():
         default_password = "12345"
         default_password_used = False
 
-        self._logger.info("Negociating {} session.".format(self._type))
+        self._logger.info("Negotiating {} session.".format(self._type))
 
         self._stream_writer.write("*99*{}##".format(type_id).encode())
         await self._stream_writer.drain()
@@ -189,23 +189,24 @@ class OWNSession():
         if resulting_message.is_NACK():
             self._logger.error("Error while opening {} session.".format(self._type))
             error = True
-            error_message = "Connection refused"
+            error_message = "connection_refused"
 
         raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
         if resulting_message.is_NACK():
             error = True
-            error_message = "Connection refused"
+            error_message = "negotiation_refused"
             self._logger.debug("Reply: {}".format(resulting_message))
             self._logger.error("Error while opening {} session.".format(self._type))
         elif resulting_message.is_SHA():
             error = True
-            error_message = "HMAC Authentication required"
+            error_message = "unsupported_authentication"
             self._logger.info("Received SHA challenge: {}".format(resulting_message))
             self._logger.error("Error while opening {} session: HMAC authentication not supported.".format(self._type))
         elif resulting_message.is_nonce():
             self._logger.info("Received nonce: {}".format(resulting_message))
             if self._gateway.password is None:
+                error_message = "password_required"
                 self._logger.warning("Connection requires a password but none was provided, trying default.")
                 default_password_used = True
                 hashedPass = "*#{}##".format(self._get_own_password(default_password, resulting_message.nonce))
@@ -219,11 +220,12 @@ class OWNSession():
             self._logger.debug("Reply: {}".format(resulting_message))
             if resulting_message.is_NACK():
                 error = True
-                error_message = "Password required"
+                if error_message != "password_required":
+                    error_message = "password_error"
                 self._logger.error("Password error while opening {} session.".format(self._type))
             elif resulting_message.is_ACK():
                 if default_password_used:
-                    error_message = "Default password was used"
+                    error_message = "default_password"
                     self._gateway.password = default_password
                 self._logger.info("{} session established.".format(self._type.capitalize()))
         elif resulting_message.is_ACK():
@@ -301,7 +303,7 @@ class OWNEventSession(OWNSession):
 
         self._logger.info("Opening event session.")
         self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
-        await self._negociate()
+        await self._negotiate()
     
     async def get_next(self):
         """ Acts as an entry point to read messages on the event bus.
@@ -336,9 +338,9 @@ class OWNCommandSession(OWNSession):
 
         command_stream_reader, command_stream_writer = await asyncio.open_connection(self._address, self._port)
         message_string = str(message).encode()
-        negociation_result = await self._negociate()
+        negotiation_result = await self._negotiate()
         
-        if negociation_result["Success"]:
+        if negotiation_result["Success"]:
             command_stream_writer.write(message_string)
             await command_stream_writer.drain()
             raw_response = await command_stream_reader.readuntil(OWNSession.SEPARATOR)
