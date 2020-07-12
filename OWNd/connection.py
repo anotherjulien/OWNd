@@ -10,25 +10,69 @@ from urllib.parse import urlparse
 class OWNGateway():
 
     def __init__(self, discovery_info: dict):
+        # Attributes potentially provided by user
+        self.address = discovery_info["address"] if "address" in discovery_info else None
+        self._password = discovery_info["password"] if "password" in discovery_info else None
+        # Attributes retrieved from SSDP discovery
         self.ssdp_location = discovery_info["ssdp_location"] if "ssdp_location" in discovery_info else None
         self.ssdp_st = discovery_info["ssdp_st"] if "ssdp_st" in discovery_info else None
-        # Attributes for accessing info from retrieved UPnP device description
+        # Attributes retrieved from UPnP device description
         self.deviceType = discovery_info["deviceType"] if "deviceType" in discovery_info else None
         self.friendlyName = discovery_info["friendlyName"] if "friendlyName" in discovery_info else None
         self.manufacturer = discovery_info["manufacturer"] if "manufacturer" in discovery_info else None
         self.manufacturerURL = discovery_info["manufacturerURL"] if "manufacturerURL" in discovery_info else None
         self.modelName = discovery_info["modelName"] if "modelName" in discovery_info else None
         self.modelNumber = discovery_info["modelNumber"] if "modelNumber" in discovery_info else None
-        self.presentationURL = discovery_info["presentationURL"] if "presentationURL" in discovery_info else None
+        #self.presentationURL = discovery_info["presentationURL"] if "presentationURL" in discovery_info else None
         self.serialNumber = discovery_info["serialNumber"] if "serialNumber" in discovery_info else None
         self.UDN = discovery_info["UDN"] if "UDN" in discovery_info else None
-        self.address = discovery_info["address"] if "address" in discovery_info else None
+        # Attributes retrieved from SOAP service control
         self.port = discovery_info["port"] if "port" in discovery_info else None
 
+    @property
+    def id(self) -> str:
+        return self.serialNumber
+    
+    @id.setter
+    def id(self, id: str) -> None:
+        self.serialNumber = id
+
+    @property
+    def host(self) -> str:
+        return self.address
+
+    @host.setter
+    def host(self, host: str) -> None:
+        self.address = host
+
+    @property
+    def firmware(self) -> str:
+        return self.modelNumber
+    
+    @firmware.setter
+    def firmware(self, firmware: str) -> None:
+        self.modelNumber = firmware
+
+    @property
+    def serial(self) -> str:
+        return self.serialNumber
+
+    @serial.setter
+    def serial(self, serial: str) -> None:
+        self.serialNumber = serial
+
+    @property
+    def password(self) -> str:
+        return self._password
+
+    @password.setter
+    def password(self, password: str) -> None:
+        self._password = password
 
     @classmethod
-    async def get_first_available_gateway(cls):
+    async def get_first_available_gateway(cls, password: str = None):
         local_gateways = await find_gateways()
+        local_gateways[0]["password"] = password
         return cls(local_gateways[0])
 
     @classmethod
@@ -43,7 +87,7 @@ class OWNGateway():
             elif "address" in discovery_info and discovery_info["address"] is not None:
                 return await build_from_address(discovery_info["address"])
             else:
-                return await cls.get_first_available_gateway()
+                return await cls.get_first_available_gateway(password = discovery_info["password"] if "password" in discovery_info else None)
 
         return cls(discovery_info)
 
@@ -54,12 +98,12 @@ class OWNGateway():
         else:
             return await get_first_available_gateway()
 
-class OWNConnection():
+class OWNSession():
     """ Connection to OpenWebNet gateway """
 
     SEPARATOR = '##'.encode()
 
-    def __init__(self, gateway: OWNGateway = None, password: str = None):
+    def __init__(self, gateway: OWNGateway = None, connection_type: str = "test", logger: logging.Logger = None):
         """ Initialize the class
         Arguments:
         logger: instance of logging
@@ -69,8 +113,11 @@ class OWNConnection():
         """
         
         self._gateway = gateway
-        self._password = password
-        self._logger = None
+        self._type = connection_type.lower()
+        self._logger = logger
+
+        self._stream_reader : asyncio.StreamReader
+        self._stream_writer : asyncio.StreamWriter
 
     @property
     def gateway(self) -> OWNGateway:
@@ -82,7 +129,7 @@ class OWNConnection():
 
     @property
     def password(self) -> str:
-        return self._password
+        return str(self._password)
 
     @password.setter
     def password(self, password: str) -> None:
@@ -96,124 +143,94 @@ class OWNConnection():
     def logger(self, logger: logging.Logger) -> None:
         self._logger = logger
 
-    async def test_connection(self) -> bool:
+    @property
+    def connection_type(self) -> str:
+        return self._type
 
-        event_stream_reader, event_stream_writer = await asyncio.open_connection(self._address, self._port)
-        result = await self._negociate(reader=event_stream_reader, writer=event_stream_writer, is_command=False)
-        event_stream_writer.close()
-        await event_stream_writer.wait_closed()
+    @connection_type.setter
+    def connection_type(self, connection_type: str) -> None:
+        self._type = connection_type.lower()
+
+    @classmethod
+    async def test_gateway(cls, gateway: OWNGateway) -> dict:
+        connection = cls(gateway)
+        return await connection.test_connection()
+
+    async def test_connection(self) -> dict:
+
+        self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+        result = await self._negociate(is_command=False)
+        await self.close()
 
         return result
 
-    async def connect(self):
-
-        if self._gateway.serialNumber is not None:
-            self._logger.info("{} server running firmware {} has serial {}.".format(self._gateway.modelName, self._gateway.modelNumber, self._gateway.serialNumber))
-
-        self._logger.info("Opening event session.")
-        self._event_stream_reader, self._event_stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
-        await self._negociate(reader=self._event_stream_reader, writer=self._event_stream_writer, is_command=False)
-
-    async def close(self):
+    async def close(self) -> None:
         """ Closes the event connection to the OpenWebNet gateway """
-        self._event_stream_writer.close()
-        await self._event_stream_writer.wait_closed()
-        self._logger.info("Event session closed.")
-
-    async def send(self, message):
-        """ Send the attached message on a new 'command' connection
-        that  is then immediately closed """
-
-        while not self.is_ready:
-            await asyncio.sleep(0.5)
-
-        self._logger.info("Opening command session.")
-
-        command_stream_reader, command_stream_writer = await asyncio.open_connection(self._address, self._port)
-        message_string = str(message).encode()
-        
-        if await self._negociate(reader=command_stream_reader, writer=command_stream_writer, is_command=True):
-            command_stream_writer.write(message_string)
-            await command_stream_writer.drain()
-            raw_response = await command_stream_reader.readuntil(OWNConnection.SEPARATOR)
-            resulting_message = OWNSignaling(raw_response.decode())
-            if resulting_message.is_NACK():
-                command_stream_writer.write(message_string)
-                await command_stream_writer.drain()
-                raw_response = await command_stream_reader.readuntil(OWNConnection.SEPARATOR)
-                resulting_message = OWNSignaling(raw_response.decode())
-                if resulting_message.is_NACK():
-                    self._logger.error("Could not send message {}.".format(message))
-                elif resulting_message.is_ACK():
-                    self._logger.info("Message {} was successfully sent.".format(message))
-            elif resulting_message.is_ACK():
-                self._logger.info("Message {} was successfully sent.".format(message))
-            else:
-                self._logger.info("Message {} received response {}.".format(message,  resulting_message))
-
-        command_stream_writer.close()
-        await command_stream_writer.wait_closed()
-
-        self._logger.info("Command session closed.")
+        self._stream_writer.close()
+        await self._stream_writer.wait_closed()
+        self._logger.info("{} session closed.".format(self._type.capitalize()))
     
-    async def get_next(self):
-        """ Acts as an entry point to read messages on the event bus.
-        It will read one frame and return it as an OWNMessage object """
-        try:
-            data = await self._event_stream_reader.readuntil(OWNConnection.SEPARATOR)
-            return OWNEvent.parse(data.decode())
-        except asyncio.exceptions.IncompleteReadError:
-            return None
-    
-    async def _negociate(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, is_command = False) -> bool:
+    async def _negociate(self) -> dict:
 
-        _session_type = 0 if is_command else 1
-        _error = False
+        type_id = 0 if self._type == "command" else 1
+        error = False
+        error_message = None
+        default_password = "12345"
+        default_password_used = False
 
-        self._logger.info("Negociating {} session.".format("command" if is_command else "event"))
+        self._logger.info("Negociating {} session.".format(self._type))
 
-        writer.write("*99*{}##".format(_session_type).encode())
-        await writer.drain()
+        self._stream_writer.write("*99*{}##".format(type_id).encode())
+        await self._stream_writer.drain()
 
-        raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
+        raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
         self._logger.debug("Reply: {}".format(resulting_message))
         if resulting_message.is_NACK():
-            self._logger.error("Error while opening {} session.".format("command" if is_command else "event"))
+            self._logger.error("Error while opening {} session.".format(self._type))
+            error = True
+            error_message = "Connection refused"
 
-        raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
+        raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
         if resulting_message.is_NACK():
-            _error = True
+            error = True
+            error_message = "Connection refused"
             self._logger.debug("Reply: {}".format(resulting_message))
-            self._logger.error("Error while opening {} session.".format("command" if is_command else "event"))
+            self._logger.error("Error while opening {} session.".format(self._type))
         elif resulting_message.is_SHA():
-            _error = True
+            error = True
+            error_message = "HMAC Authentication required"
             self._logger.info("Received SHA challenge: {}".format(resulting_message))
-            self._logger.error("Error while opening {} session: HMAC authentication not supported.".format("command" if is_command else "event"))
+            self._logger.error("Error while opening {} session: HMAC authentication not supported.".format(self._type))
         elif resulting_message.is_nonce():
             self._logger.info("Received nonce: {}".format(resulting_message))
-            if self._password is None:
+            if self._gateway.password is None:
                 self._logger.warning("Connection requires a password but none was provided, trying default.")
-                hashedPass = "*#{}##".format(self._get_own_password(12345, resulting_message.nonce))
+                default_password_used = True
+                hashedPass = "*#{}##".format(self._get_own_password(default_password, resulting_message.nonce))
             else:
-                hashedPass = "*#{}##".format(self._get_own_password(self._password, resulting_message.nonce))
-            self._logger.info("Sending {} session password.".format("command" if is_command else "event"))
-            writer.write(hashedPass.encode())
-            await writer.drain()
-            raw_response = await reader.readuntil(OWNConnection.SEPARATOR)
+                hashedPass = "*#{}##".format(self._get_own_password(self._gateway.password, resulting_message.nonce))
+            self._logger.info("Sending {} session password.".format(self._type))
+            self._stream_writer.write(hashedPass.encode())
+            await self._stream_writer.drain()
+            raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             resulting_message = OWNSignaling(raw_response.decode())
             self._logger.debug("Reply: {}".format(resulting_message))
             if resulting_message.is_NACK():
-                _error = True
-                self._logger.error("Password error while opening {} session.".format("command" if is_command else "event"))
+                error = True
+                error_message = "Password required"
+                self._logger.error("Password error while opening {} session.".format(self._type))
             elif resulting_message.is_ACK():
-                self._logger.info("{} session established.".format("Command" if is_command else "Event"))
+                if default_password_used:
+                    error_message = "Default password was used"
+                    self._gateway.password = default_password
+                self._logger.info("{} session established.".format(self._type.capitalize()))
         elif resulting_message.is_ACK():
             self._logger.debug("Reply: {}".format(resulting_message))
             self._logger.info("{} session established.".format("Command" if is_command else "Event"))
 
-        return not _error
+        return {"Success": not error, "Message": error_message}
 
     def _get_own_password (self, password, nonce, test=False) :
         start = True    
@@ -266,3 +283,81 @@ class OWNConnection():
                 print("     num1: %08x num2: %08x" % (num1, num2))
             num2 = num1
         return num1
+
+class OWNEventSession(OWNSession):
+
+    def __init__(self, gateway: OWNGateway = None, logger: logging.Logger = None):
+        super().__init__(gateway = gateway, connection_type = "event", logger = logger)
+
+    @classmethod
+    async def connect_to_gateway(cls, gateway: OWNGateway):
+        connection = cls(gateway)
+        await connection.connect
+
+    async def connect(self):
+
+        if self._gateway.serialNumber is not None:
+            self._logger.info("{} server running firmware {} has serial {}.".format(self._gateway.modelName, self._gateway.modelNumber, self._gateway.serialNumber))
+
+        self._logger.info("Opening event session.")
+        self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+        await self._negociate()
+    
+    async def get_next(self):
+        """ Acts as an entry point to read messages on the event bus.
+        It will read one frame and return it as an OWNMessage object """
+        try:
+            data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+            return OWNEvent.parse(data.decode())
+        except asyncio.exceptions.IncompleteReadError:
+            return None
+
+    async def close(self):
+        """ Closes the event connection to the OpenWebNet gateway """
+        self._stream_writer.close()
+        await self._stream_writer.wait_closed()
+        self._logger.info("Event session closed.")
+
+class OWNCommandSession(OWNSession):
+
+    def __init__(self, gateway: OWNGateway = None, logger: logging.Logger = None):
+        super().__init__(gateway = gateway, connection_type = "command", logger = logger)
+
+    @classmethod
+    async def send_to_gateway (cls,  message: str, gateway: OWNGateway):
+        connection = cls(gateway)
+        await connection.send(message)
+
+    async def send(self, message: str):
+        """ Send the attached message on a new 'command' connection
+        that  is then immediately closed """
+
+        self._logger.info("Opening command session.")
+
+        command_stream_reader, command_stream_writer = await asyncio.open_connection(self._address, self._port)
+        message_string = str(message).encode()
+        negociation_result = await self._negociate()
+        
+        if negociation_result["Success"]:
+            command_stream_writer.write(message_string)
+            await command_stream_writer.drain()
+            raw_response = await command_stream_reader.readuntil(OWNSession.SEPARATOR)
+            resulting_message = OWNSignaling(raw_response.decode())
+            if resulting_message.is_NACK():
+                command_stream_writer.write(message_string)
+                await command_stream_writer.drain()
+                raw_response = await command_stream_reader.readuntil(OWNSession.SEPARATOR)
+                resulting_message = OWNSignaling(raw_response.decode())
+                if resulting_message.is_NACK():
+                    self._logger.error("Could not send message {}.".format(message))
+                elif resulting_message.is_ACK():
+                    self._logger.info("Message {} was successfully sent.".format(message))
+            elif resulting_message.is_ACK():
+                self._logger.info("Message {} was successfully sent.".format(message))
+            else:
+                self._logger.info("Message {} received response {}.".format(message,  resulting_message))
+
+        command_stream_writer.close()
+        await command_stream_writer.wait_closed()
+
+        self._logger.info("Command session closed.")

@@ -3,24 +3,25 @@ import logging
 import asyncio
 import argparse
 
-from connection import OWNConnection, OWNGateway
+from connection import OWNGateway, OWNSession, OWNEventSession, OWNCommandSession
 from message import *
 from discovery import find_gateways
 
-async def main(arguments: dict, connection: OWNConnection) -> None:
+async def main(arguments: dict, connection: OWNEventSession) -> None:
     """ Package entry point! """
+    
     address = arguments["address"] if "address" in arguments and isinstance(arguments["address"], str) else None
     port = arguments["port"] if "port" in arguments and isinstance(arguments["port"], str) else None
     password = arguments["password"] if "password" in arguments and isinstance(arguments["password"], str) else None
     logger = arguments["logger"] if "logger" in arguments and isinstance(arguments["logger"], logging.Logger) else None
-
-    gateway = await OWNGateway.build_from_discovery_info({"address": address, "port": port})
+    
+    gateway = await OWNGateway.build_from_discovery_info({"address": address, "port": port, "password": password})
     connection.gateway = gateway
-    connection.password = password
-
+    
     if logger is not None:
         connection.logger = logger
-        await connection.connect()
+
+    await connection.connect()
 
     while True:
         message = await connection.get_next()
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--address", type=str, help="IP address of the OpenWebNet gateway")
     parser.add_argument("-p", "--port", type=int, help="TCP port to connectect the gateway, default is 20000")
-    parser.add_argument("-P", "--password", type=int, help="Numeric password for the OpenWebNet connection, default is 12345 (HMAC passwords are not supported)")
+    parser.add_argument("-P", "--password", type=str, help="Numeric password for the OpenWebNet connection, default is 12345 (HMAC passwords are not supported)")
     parser.add_argument("-v", "--verbose", type=int, help="Change output verbosity [0 = WARNING; 1 = INFO (default); 2 = DEBUG]")
     args = parser.parse_args()
 
@@ -58,11 +59,11 @@ if __name__ == "__main__":
     # add the handlers to the logger
     logger.addHandler(log_stream_handler)
 
-    connection = OWNConnection()
+    event_session = OWNEventSession()
     arguments = {"address": args.address, "port": args.port, "password": args.password, "logger": logger}
 
     loop = asyncio.get_event_loop()
-    main_task = asyncio.ensure_future(main(arguments, connection))
+    main_task = asyncio.ensure_future(main(arguments, event_session))
     #loop.set_debug(True)
 
     try:
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Stoping OWNd.")
         main_task.cancel()
-        loop.run_until_complete(connection.close())
+        loop.run_until_complete(event_session.close())
         loop.stop()
         loop.close()
     finally:
