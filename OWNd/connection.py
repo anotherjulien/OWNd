@@ -69,11 +69,18 @@ class OWNGateway():
     def password(self, password: str) -> None:
         self._password = password
 
-    @classmethod
-    async def get_first_available_gateway(cls, password: str = None):
+    @staticmethod
+    async def get_first_available_gateway(password: str = None):
         local_gateways = await find_gateways()
-        local_gateways[0]["password"] = password
-        return cls(local_gateways[0])
+        local_gateways[0].password = password
+        return local_gateways[0]
+    
+    @staticmethod
+    async def find_from_address(address: str):
+        if address is not None:
+            return await get_gateway(address)
+        else:
+            return await get_first_available_gateway()
 
     @classmethod
     async def build_from_discovery_info(cls, discovery_info: dict):
@@ -85,18 +92,11 @@ class OWNGateway():
             if "ssdp_location" in discovery_info and discovery_info["ssdp_location"] is not None:
                 discovery_info["port"] = await get_port(discovery_info["ssdp_location"])
             elif "address" in discovery_info and discovery_info["address"] is not None:
-                return await build_from_address(discovery_info["address"])
+                return await find_from_address(discovery_info["address"])
             else:
                 return await cls.get_first_available_gateway(password = discovery_info["password"] if "password" in discovery_info else None)
 
         return cls(discovery_info)
-
-    @classmethod
-    async def build_from_address(cls, address: str):
-        if address is not None:
-            return cls(await get_gateway(address))
-        else:
-            return await get_first_available_gateway()
 
 class OWNSession():
     """ Connection to OpenWebNet gateway """

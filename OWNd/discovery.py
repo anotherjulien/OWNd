@@ -5,6 +5,7 @@ import errno
 import logging
 import socket
 import xml.dom.minidom
+from connection import OWNGateway
 
 class SSDPMessage:
     """Simplified HTTP message to serve as a SSDP message."""
@@ -253,14 +254,14 @@ async def find_gateways() -> list:
         discovery_info = await recvq.get()
         discovery_info .update(await _get_scpd_details(discovery_info["ssdp_location"]))
 
-        return_list.append(discovery_info)
+        return_list.append(OWNGateway.build_from_discovery_info(discovery_info))
     
     return return_list
 
-async def get_gateway(address: str) -> dict:
+async def get_gateway(address: str) -> OWNGateway:
     local_gateways = await find_gateways()
     for gateway in local_gateways:
-        if gateway["address"] == address:
+        if gateway.address == address:
             return gateway
 
 if __name__ == "__main__":
