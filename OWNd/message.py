@@ -6,18 +6,18 @@ import re
 
 class OWNMessage():
 
-    _ACK = re.compile("^\*#\*1##$") #  *#*1##
-    _NACK = re.compile("^\*#\*0##$") #  *#*1##
-    _COMMAND_SESSION = re.compile("^\*99\*0##$") #  *99*0##
-    _EVENT_SESSION = re.compile("^\*99\*1##$") #  *99*1##
-    _NONCE = re.compile("^\*#(\d+)##$") #  *#123456789##
-    _SHA = re.compile("^\*98\*(\d)##$") #  *98*SHA##
+    _ACK = re.compile(r"^\*#\*1##$") #  *#*1##
+    _NACK = re.compile(r"^\*#\*0##$") #  *#*1##
+    _COMMAND_SESSION = re.compile(r"^\*99\*0##$") #  *99*0##
+    _EVENT_SESSION = re.compile(r"^\*99\*1##$") #  *99*1##
+    _NONCE = re.compile(r"^\*#(\d+)##$") #  *#123456789##
+    _SHA = re.compile(r"^\*98\*(\d)##$") #  *98*SHA##
 
-    _STATUS = re.compile("^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>#?\*|\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
-    _STATUS_REQUEST = re.compile("^\*#(?P<who>\d+)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *#WHO*WHERE
-    _DIMENSION_WRITING = re.compile("^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
-    _DIMENSION_REQUEST = re.compile("^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$") #  *#WHO*WHERE*DIMENSION##
-    _DIMENSION_REQUEST_REPLY = re.compile("^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*DIMENSION*VAL1*VALn##
+    _STATUS = re.compile(r"^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>#?\*|\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
+    _STATUS_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *#WHO*WHERE
+    _DIMENSION_WRITING = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
+    _DIMENSION_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$") #  *#WHO*WHERE*DIMENSION##
+    _DIMENSION_REQUEST_REPLY = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*DIMENSION*VAL1*VALn##
 
     """ Base class for all OWN messages """
     def __init__(self, data):
@@ -73,7 +73,7 @@ class OWNEvent(OWNMessage):
 
     @classmethod
     def parse(cls, data):
-        _match = re.match("^\*#?(?P<who>\d+)\*.+##$", data)
+        _match = re.match(r"^\*#?(?P<who>\d+)\*.+##$", data)
         
         if _match:
             _who = int(_match.group('who'))
@@ -97,7 +97,7 @@ class OWNEvent(OWNMessage):
             elif _who == 18:
                 return OWNEnergyEvent(data)
             elif _who == 25:
-                _where = re.match("^\*.+\*(?P<where>\d+)##$", data).group('where')
+                _where = re.match(r"^\*.+\*(?P<where>\d+)##$", data).group('where')
                 if _where.startswith('2'):
                     return OWNCENPlusEvent(data)
                 elif _where.startswith('3'):
