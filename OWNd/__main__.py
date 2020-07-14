@@ -3,8 +3,7 @@ import asyncio
 import logging
 import time
 
-from .connection import (OWNCommandSession, OWNEventSession, OWNGateway,
-                             OWNSession)
+from .connection import (OWNEventSession, OWNGateway)
 
 
 async def main(arguments: dict, connection: OWNEventSession) -> None:
