@@ -217,9 +217,6 @@ async def find_gateways() -> list:
 
     return_list = list()
 
-    # Getting a list of local interfaces IPv4 address
-    local_addresses = list({i[4][0] for i in socket.getaddrinfo(socket.getfqdn(), None, family=socket.AF_INET)})
-
     # Start the asyncio loop.
     loop = asyncio.get_running_loop()
     recvq = asyncio.Queue()
@@ -236,19 +233,12 @@ async def find_gateways() -> list:
         },
     ))
 
-    async def _multicast_search(local_address: str) -> None:
-        transport, protocol = await loop.create_datagram_endpoint(lambda: SimpleServiceDiscoveryProtocol(recvq, excq), local_addr=(local_address,0), family=socket.AF_INET) # pylint: disable=unused-variable
-        transport.sendto(search_request, ("239.255.255.250", 1900))
-        try:
-            await asyncio.sleep(2)
-        finally:
-            transport.close()
-
-    tasks = []
-    for address in local_addresses:
-        tasks.append(_multicast_search(address))
-
-    await asyncio.gather(*tasks)
+    transport, protocol = await loop.create_datagram_endpoint(lambda: SimpleServiceDiscoveryProtocol(recvq, excq), family=socket.AF_INET) # pylint: disable=unused-variable
+    transport.sendto(search_request, ("239.255.255.250", 1900))
+    try:
+        await asyncio.sleep(2)
+    finally:
+        transport.close()
 
     while not recvq.empty():
         discovery_info = await recvq.get()
