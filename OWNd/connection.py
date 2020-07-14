@@ -5,7 +5,7 @@ import logging
 from urllib.parse import urlparse
 
 from .discovery import find_gateways, get_gateway, get_port
-from .message import *
+from .message import OWNSignaling, OWNEvent
 
 
 class OWNGateway():
@@ -160,7 +160,7 @@ class OWNSession():
     async def test_connection(self) -> dict:
 
         self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
-        result = await self._negotiate(is_command=False)
+        result = await self._negotiate()
         await self.close()
 
         return result
@@ -333,7 +333,7 @@ class OWNCommandSession(OWNSession):
 
         self._logger.info("Opening command session.")
 
-        command_stream_reader, command_stream_writer = await asyncio.open_connection(self._address, self._port)
+        command_stream_reader, command_stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
         message_string = str(message).encode()
         negotiation_result = await self._negotiate()
         

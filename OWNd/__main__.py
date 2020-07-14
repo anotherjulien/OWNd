@@ -5,8 +5,6 @@ import time
 
 from .connection import (OWNCommandSession, OWNEventSession, OWNGateway,
                              OWNSession)
-from .discovery import find_gateways
-from .message import *
 
 
 async def main(arguments: dict, connection: OWNEventSession) -> None:
@@ -19,7 +17,6 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
     logger = arguments["logger"] if "logger" in arguments and isinstance(arguments["logger"], logging.Logger) else None
 
     gateway = await OWNGateway.build_from_discovery_info({"address": address, "port": port, "password": password, "serialNumber": serialNumber})
-    print(gateway)
     connection.gateway = gateway
     
     if logger is not None:

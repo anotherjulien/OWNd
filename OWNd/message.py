@@ -23,6 +23,9 @@ class OWNMessage():
     def __init__(self, data):
         self._raw = data
         self._human_readable_log = self._raw
+        self._family = ""
+        self._who = ""
+        self._where =""
 
     def is_event(self) -> bool:
         return self._family == 'EVENT'
@@ -189,7 +192,7 @@ class OWNLightingEvent(OWNEvent):
                 self._human_readable_log = f"Light {self._where} is switched on."
             elif self._state > 1 and self._state < 11:
                 self._brightness = self._state * 10
-                self._human_readable_log = f"Light {self._where} is switched on at {self._bightness}%."
+                self._human_readable_log = f"Light {self._where} is switched on at {self._brightness}%."
             elif self._state == 11:
                 self._timer = 60
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
@@ -223,7 +226,7 @@ class OWNLightingEvent(OWNEvent):
                     self._human_readable_log = f"Light {self._where} is switched off."
                 else:
                     self._state = 1
-                    self._human_readable_log = f"Light {self._where} is switched on at {self._bightness}%."
+                    self._human_readable_log = f"Light {self._where} is switched on at {self._brightness}%."
             elif self._dimension == 2:
                 self._timer = int(self._dimension_value[0])*3600 + int(self._dimension_value[1])*60 + int(self._dimension_value[2])
                 self._human_readable_log = "Light {self._where} is switched on for {self._timer}s."
@@ -553,12 +556,12 @@ class OWNEnergyEvent(OWNEvent):
             return None
         
         self._sensor = self._where[1:]
-        self._active_power = None
-        self._hourly_consumption = None
-        self._daily_consumption = None
-        self._current_day_partial_consumption = None
-        self._monthly_consumption = None
-        self._current_month_partial_consumption = None
+        self._active_power = 0
+        self._hourly_consumption = dict()
+        self._daily_consumption = dict()
+        self._current_day_partial_consumption = 0
+        self._monthly_consumption = dict()
+        self._current_month_partial_consumption = 0
         
         if self._dimension is not None:
             if self._dimension == 113:
@@ -582,7 +585,7 @@ class OWNEnergyEvent(OWNEvent):
                     
             elif self._dimension == 54:
                 self._current_day_partial_consumption = int(self._dimension_value[0])
-                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_day_partial_consumption['value']} Wh up to now today."
+                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_day_partial_consumption} Wh up to now today."
             elif self._dimension == 52:
                 _messageDate =  datetime.date(int("20" + str(self._dimension_param[0])), self._dimension_param[1], 1)
                 self._monthly_consumption['date'] = _messageDate
@@ -590,7 +593,7 @@ class OWNEnergyEvent(OWNEvent):
                 self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._monthly_consumption['value']} Wh for {self._monthly_consumption['date'].strftime('%B %Y')}."
             elif self._dimension == 53:
                 self._current_month_partial_consumption = int(self._dimension_value[0])
-                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_month_partial_consumption['value']} Wh up to now this month."
+                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_month_partial_consumption} Wh up to now this month."
 
     @property
     def active_power(self):

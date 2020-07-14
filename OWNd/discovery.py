@@ -237,7 +237,7 @@ async def find_gateways() -> list:
     ))
 
     async def _multicast_search(local_address: str) -> None:
-        transport, protocol = await loop.create_datagram_endpoint(lambda: SimpleServiceDiscoveryProtocol(recvq, excq), local_addr=(local_address,0), family=socket.AF_INET)
+        transport, protocol = await loop.create_datagram_endpoint(lambda: SimpleServiceDiscoveryProtocol(recvq, excq), local_addr=(local_address,0), family=socket.AF_INET) # pylint: disable=unused-variable
         transport.sendto(search_request, ("239.255.255.250", 1900))
         try:
             await asyncio.sleep(2)
