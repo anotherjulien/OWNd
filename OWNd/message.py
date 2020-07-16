@@ -39,7 +39,7 @@ class OWNMessage():
     @property
     def who(self) -> str:
         """ The 'who' ID of the subject of this message """
-        return self._who[1:] if self._who.startswith('#') else self._who
+        return self._who
 
     @property
     def where(self) -> str:
