@@ -327,36 +327,37 @@ class OWNCommandSession(OWNSession):
         connection = cls(gateway)
         await connection.send(message)
 
-    async def send(self, message: str):
+    async def send(self, message: str, is_status_request: bool = False):
         """ Send the attached message on a new 'command' connection
         that  is then immediately closed """
 
         self._logger.info("Opening command session.")
 
-        command_stream_reader, command_stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+        self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
         message_string = str(message).encode()
         negotiation_result = await self._negotiate()
         
         if negotiation_result["Success"]:
-            command_stream_writer.write(message_string)
-            await command_stream_writer.drain()
-            raw_response = await command_stream_reader.readuntil(OWNSession.SEPARATOR)
-            resulting_message = OWNSignaling(raw_response.decode())
-            if resulting_message.is_NACK():
-                command_stream_writer.write(message_string)
-                await command_stream_writer.drain()
-                raw_response = await command_stream_reader.readuntil(OWNSession.SEPARATOR)
+            self._stream_writer.write(message_string)
+            await self._stream_writer.drain()
+            if not  is_status_request:
+                raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
                 resulting_message = OWNSignaling(raw_response.decode())
                 if resulting_message.is_NACK():
-                    self._logger.error("Could not send message %s.", message)
+                    self._stream_writer.write(message_string)
+                    await self._stream_writer.drain()
+                    raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                    resulting_message = OWNSignaling(raw_response.decode())
+                    if resulting_message.is_NACK():
+                        self._logger.error("Could not send message %s.", message)
+                    elif resulting_message.is_ACK():
+                        self._logger.info("Message %s was successfully sent.", message)
                 elif resulting_message.is_ACK():
                     self._logger.info("Message %s was successfully sent.", message)
-            elif resulting_message.is_ACK():
-                self._logger.info("Message %s was successfully sent.", message)
-            else:
-                self._logger.info("Message %s received response %s.", message,  resulting_message)
+                else:
+                    self._logger.info("Message %s received response %s.", message,  resulting_message)
 
-        command_stream_writer.close()
-        await command_stream_writer.wait_closed()
+        self._stream_writer.close()
+        await self._stream_writer.wait_closed()
 
         self._logger.info("Command session closed.")

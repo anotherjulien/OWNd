@@ -15,7 +15,7 @@ class OWNMessage():
 
     _STATUS = re.compile(r"^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>#?\*|\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
     _STATUS_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *#WHO*WHERE
-    _DIMENSION_WRITING = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
+    _DIMENSION_WRITING = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
     _DIMENSION_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$") #  *#WHO*WHERE*DIMENSION##
     _DIMENSION_REQUEST_REPLY = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*DIMENSION*VAL1*VALn##
 
@@ -743,6 +743,12 @@ class OWNLightingCommand(OWNCommand):
 
     def __init__(self, data):
         super().__init__(data)
+    
+    @classmethod
+    def status(cls, _where):
+        message = cls(f"*#1*{_where}##")
+        message._human_readable_log = f"Requesting light or switch {_where} status."
+        return message
 
     @classmethod
     def switch_on(cls, _where):
@@ -759,7 +765,7 @@ class OWNLightingCommand(OWNCommand):
     @classmethod
     def set_brightness(cls, _where, _level=30):
         command_level = int(_level)+100
-        message = cls(f"*#1*{_where}#1*{command_level}*2##")
+        message = cls(f"*#1*{_where}#1*{command_level}*0##")
         message._human_readable_log = f"Setting light {_where} brightness to {_level}%."
         return message
 
@@ -767,6 +773,12 @@ class OWNAutomationCommand(OWNCommand):
 
     def __init__(self, data):
         super().__init__(data)
+    
+    @classmethod
+    def status(cls, _where):
+        message = cls(f"*#2*{_where}##")
+        message._human_readable_log = f"Requesting shutter {_where} status."
+        return message
 
     @classmethod
     def raise_shutter(cls, _where):
