@@ -179,7 +179,7 @@ class OWNSession():
         default_password = "12345"
         default_password_used = False
 
-        self._logger.info("Negotiating %s session.", self._type)
+        self._logger.debug("Negotiating %s session.", self._type)
 
         self._stream_writer.write(f"*99*{type_id}##".encode())
         await self._stream_writer.drain()
@@ -202,10 +202,10 @@ class OWNSession():
         elif resulting_message.is_SHA():
             error = True
             error_message = "unsupported_authentication"
-            self._logger.info("Received SHA challenge: %s", resulting_message)
+            self._logger.debug("Received SHA challenge: %s", resulting_message)
             self._logger.error("Error while opening %s session: HMAC authentication not supported.", self._type)
         elif resulting_message.is_nonce():
-            self._logger.info("Received nonce: %s", resulting_message)
+            self._logger.debug("Received nonce: %s", resulting_message)
             if self._gateway.password is None:
                 error_message = "password_required"
                 self._logger.warning("Connection requires a password but none was provided, trying default.")
@@ -213,7 +213,7 @@ class OWNSession():
                 hashedPass = f"*#{self._get_own_password(default_password, resulting_message.nonce)}##"
             else:
                 hashedPass = f"*#{self._get_own_password(self._gateway.password, resulting_message.nonce)}##"
-            self._logger.info("Sending %s session password.", self._type)
+            self._logger.debug("Sending %s session password.", self._type)
             self._stream_writer.write(hashedPass.encode())
             await self._stream_writer.drain()
             raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
@@ -309,6 +309,10 @@ class OWNEventSession(OWNSession):
             data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             return OWNEvent.parse(data.decode())
         except asyncio.exceptions.IncompleteReadError:
+            self._logger.warning("Incomplete read on the event bus: %s.", data.decode())
+            return None
+        except AttributeError:
+            self._logger.error("Received data could not be parsed into a message: %s", data.decode())
             return None
 
     async def close(self):

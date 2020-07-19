@@ -15,7 +15,7 @@ class OWNMessage():
 
     _STATUS = re.compile(r"^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>#?\*|\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
     _STATUS_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *#WHO*WHERE
-    _DIMENSION_WRITING = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
+    _DIMENSION_WRITING = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
     _DIMENSION_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$") #  *#WHO*WHERE*DIMENSION##
     _DIMENSION_REQUEST_REPLY = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*DIMENSION*VAL1*VALn##
 
@@ -25,7 +25,7 @@ class OWNMessage():
         self._human_readable_log = self._raw
         self._family = ""
         self._who = ""
-        self._where =""
+        self._where = ""
 
     def is_event(self) -> bool:
         return self._family == 'EVENT'
@@ -44,7 +44,7 @@ class OWNMessage():
     @property
     def where(self) -> str:
         """ The 'where' ID of the subject of this message """
-        return self._where[1:] if self._where.startswith('#') else self._where
+        return self._where#[1:] if self._where.startswith('#') else self._where
 
     @property
     def entity(self) -> str:
@@ -229,7 +229,7 @@ class OWNLightingEvent(OWNEvent):
                     self._human_readable_log = f"Light {self._where} is switched on at {self._brightness}%."
             elif self._dimension == 2:
                 self._timer = int(self._dimension_value[0])*3600 + int(self._dimension_value[1])*60 + int(self._dimension_value[2])
-                self._human_readable_log = "Light {self._where} is switched on for {self._timer}s."
+                self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
 
     @property
     def brightness(self):
@@ -745,28 +745,28 @@ class OWNLightingCommand(OWNCommand):
         super().__init__(data)
     
     @classmethod
-    def status(cls, _where):
-        message = cls(f"*#1*{_where}##")
-        message._human_readable_log = f"Requesting light or switch {_where} status."
+    def status(cls, where):
+        message = cls(f"*#1*{where}##")
+        message._human_readable_log = f"Requesting light or switch {where} status."
         return message
 
     @classmethod
-    def switch_on(cls, _where):
-        message = cls(f"*1*1*{_where}##")
-        message._human_readable_log = f"Switching ON light or switch {_where}."
+    def switch_on(cls, where):
+        message = cls(f"*1*1*{where}##")
+        message._human_readable_log = f"Switching ON light or switch {where}."
         return message
 
     @classmethod
-    def switch_off(cls, _where):
-        message = cls(f"*1*0*{_where}##")
-        message._human_readable_log = f"Switching OFF light or switch {_where}."
+    def switch_off(cls, where):
+        message = cls(f"*1*0*{where}##")
+        message._human_readable_log = f"Switching OFF light or switch {where}."
         return message
 
     @classmethod
-    def set_brightness(cls, _where, _level=30):
+    def set_brightness(cls, where, _level=30):
         command_level = int(_level)+100
-        message = cls(f"*#1*{_where}#1*{command_level}*0##")
-        message._human_readable_log = f"Setting light {_where} brightness to {_level}%."
+        message = cls(f"*#1*{where}*#1*{command_level}*0##")
+        message._human_readable_log = f"Setting light {where} brightness to {_level}%."
         return message
 
 class OWNAutomationCommand(OWNCommand):
@@ -775,33 +775,44 @@ class OWNAutomationCommand(OWNCommand):
         super().__init__(data)
     
     @classmethod
-    def status(cls, _where):
-        message = cls(f"*#2*{_where}##")
-        message._human_readable_log = f"Requesting shutter {_where} status."
+    def status(cls, where):
+        message = cls(f"*#2*{where}##")
+        message._human_readable_log = f"Requesting shutter {where} status."
         return message
 
     @classmethod
-    def raise_shutter(cls, _where):
-        message = cls(f"*2*1*{_where}##")
-        message._human_readable_log = f"Raising shutter {_where}."
+    def raise_shutter(cls, where):
+        message = cls(f"*2*1*{where}##")
+        message._human_readable_log = f"Raising shutter {where}."
         return message
     
     @classmethod
-    def lower_shutter(cls, _where):
-        message = cls(f"*2*2*{_where}##")
-        message._human_readable_log = f"Lowering shutter {_where}."
+    def lower_shutter(cls, where):
+        message = cls(f"*2*2*{where}##")
+        message._human_readable_log = f"Lowering shutter {where}."
         return message
 
     @classmethod
-    def stop_shutter(cls, _where):
-        message = cls(f"*2*0*{_where}##")
-        message._human_readable_log = f"Stoping shutter {_where}."
+    def stop_shutter(cls, where):
+        message = cls(f"*2*0*{where}##")
+        message._human_readable_log = f"Stoping shutter {where}."
         return message
 
     @classmethod
-    def set_shutter_level(cls, _where, _level=30):
-        message = cls(f"*#2*{_where}#11#001*{_level}##")
-        message._human_readable_log = f"Setting shutter {_where} position to {_level}%."
+    def set_shutter_level(cls, where, level=30):
+        message = cls(f"*#2*{where}*#11#001*{level}##")
+        message._human_readable_log = f"Setting shutter {where} position to {level}%."
+        return message
+
+class OWNDryContactCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+    
+    @classmethod
+    def status(cls, where):
+        message = cls(f"*#25*{where}##")
+        message._human_readable_log = f"Requesting dry contact {where} status."
         return message
 
 class OWNSignaling(OWNMessage):
