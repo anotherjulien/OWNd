@@ -611,6 +611,10 @@ class OWNEnergyEvent(OWNEvent):
                 self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_month_partial_consumption} Wh up to now this month."
 
     @property
+    def message_type(self):
+        return self._type
+
+    @property
     def active_power(self):
         return self._active_power
     
