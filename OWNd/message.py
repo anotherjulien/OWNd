@@ -549,12 +549,21 @@ class OWNSceneEvent(OWNEvent):
             return None
 
 class OWNEnergyEvent(OWNEvent):
+
+    MESSAGE_TYPE_ACTIVE_POWER = "active_power"
+    MESSAGE_TYPE_HOURLY_CONSUMPTION = "hourly_consumption"
+    MESSAGE_TYPE_DAILY_CONSUMPTION = "daily_consumption"
+    MESSAGE_TYPE_MONTHLY_CONSUMPTION = "monthly_consumption"
+    MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION = "current_day_partial_consumption"
+    MESSAGE_TYPE_CURRENT_MONTH_CONSUMPTION = "current_month_partial_consumption"
+
     def __init__(self, data):
         super().__init__(data)
 
         if  not self._where.startswith('5'):
             return None
         
+        self._type = None
         self._sensor = self._where[1:]
         self._active_power = 0
         self._hourly_consumption = dict()
@@ -565,6 +574,7 @@ class OWNEnergyEvent(OWNEvent):
         
         if self._dimension is not None:
             if self._dimension == 113:
+                self._type = OWNEnergyEvent.MESSAGE_TYPE_ACTIVE_POWER
                 self._active_power = int(self._dimension_value[0])
                 self._human_readable_log = f"Sensor {self._sensor} is reporting an active power draw of {self._active_power} W."
             elif self._dimension == 511:
@@ -574,24 +584,29 @@ class OWNEnergyEvent(OWNEvent):
                     _messageDate.replace(year= _now.year - 1)
 
                 if int(self._dimension_value[0]) != 25:
+                    self._type = OWNEnergyEvent.MESSAGE_TYPE_HOURLY_CONSUMPTION
                     self._hourly_consumption['date'] = _messageDate
                     self._hourly_consumption['hour'] = int(self._dimension_value[0])
                     self._hourly_consumption['value'] = int(self._dimension_value[1])
                     self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._hourly_consumption['value']} Wh for {self._hourly_consumption['date']} at {self._hourly_consumption['hour']}."
                 else:
+                    self._type = OWNEnergyEvent.MESSAGE_TYPE_DAILY_CONSUMPTION
                     self._daily_consumption['date'] = _messageDate
                     self._daily_consumption['value'] = int(self._dimension_value[1])
                     self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._daily_consumption['value']} Wh for {self._daily_consumption['date']}."
                     
             elif self._dimension == 54:
+                self._type = OWNEnergyEvent.MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION
                 self._current_day_partial_consumption = int(self._dimension_value[0])
                 self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_day_partial_consumption} Wh up to now today."
             elif self._dimension == 52:
+                self._type = OWNEnergyEvent.MESSAGE_TYPE_MONTHLY_CONSUMPTION
                 _messageDate =  datetime.date(int("20" + str(self._dimension_param[0])), self._dimension_param[1], 1)
                 self._monthly_consumption['date'] = _messageDate
                 self._monthly_consumption['value'] = int(self._dimension_value[0])
                 self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._monthly_consumption['value']} Wh for {self._monthly_consumption['date'].strftime('%B %Y')}."
             elif self._dimension == 53:
+                self._type = OWNEnergyEvent.MESSAGE_TYPE_CURRENT_MONTH_CONSUMPTION
                 self._current_month_partial_consumption = int(self._dimension_value[0])
                 self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_month_partial_consumption} Wh up to now this month."
 
