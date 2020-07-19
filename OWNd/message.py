@@ -13,7 +13,7 @@ class OWNMessage():
     _NONCE = re.compile(r"^\*#(\d+)##$") #  *#123456789##
     _SHA = re.compile(r"^\*98\*(\d)##$") #  *98*SHA##
 
-    _STATUS = re.compile(r"^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>#?\*|\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
+    _STATUS = re.compile(r"^\*(?P<who>\d+)\*(?P<what>\d+)(?P<what_param>(?:#\d+)*)\*(?P<where>\*|#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *WHO*WHAT*WHERE##
     _STATUS_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$") #  *#WHO*WHERE
     _DIMENSION_WRITING = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d*)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$") #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
     _DIMENSION_REQUEST = re.compile(r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$") #  *#WHO*WHERE*DIMENSION##
