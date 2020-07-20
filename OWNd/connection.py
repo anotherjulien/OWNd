@@ -308,7 +308,7 @@ class OWNEventSession(OWNSession):
         try:
             data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             return OWNEvent.parse(data.decode())
-        except asyncio.exceptions.IncompleteReadError:
+        except asyncio.IncompleteReadError:
             self._logger.warning("Incomplete read on the event bus: %s.", data.decode())
             return None
         except AttributeError:
