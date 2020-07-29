@@ -42,6 +42,9 @@ class OWNMessage():
     def is_request(self) -> bool:
         return self._family == 'REQUEST'
 
+    def is_translation(self) -> bool:
+        return self._family == 'COMMAND_TRANSLATION'
+
     @property
     def who(self) -> str:
         """ The 'who' ID of the subject of this message """
@@ -192,6 +195,7 @@ class OWNLightingEvent(OWNEvent):
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
+
             if self._state == 0:
                 self._human_readable_log = f"Light {self._where} is switched off."
             elif self._state == 1:
@@ -480,18 +484,21 @@ class OWNCENEvent(OWNEvent):
     def __init__(self, data):
         super().__init__(data)
 
-        self._state = self._what_param[0]
-        self._push_button = self._what
-        self._object = self._where
+        try:
+            self._state = self._what_param[0]
+        except IndexError:    
+            self._state = None
+        self.push_button = self._what
+        self.object = self._where
 
         if self._state == None:
-            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} has been pressed."
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been pressed."
         elif int(self._state) == 3:
-            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} is being held pressed."
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} is being held pressed."
         elif int(self._state) == 1:
-            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} has been released after a short press."
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been released after a short press."
         elif int(self._state) == 2:
-            self._human_readable_log = f"Button {self._push_button} of CEN object {self._object} has been released after a long press."
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been released after a long press."
 
     @property
     def is_pressed(self):
@@ -673,25 +680,25 @@ class OWNCENPlusEvent(OWNEvent):
         super().__init__(data)
 
         self._state = self._what
-        self._push_button = int(self._what_param[0])
-        self._object = self._where[1:]
+        self.push_button = int(self._what_param[0])
+        self.object = self._where[1:]
 
         if self._state == 21:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been pressed"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} has been pressed"
         elif self._state == 22:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} is being held pressed"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} is being held pressed"
         elif self._state == 23:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} is still being held pressed"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} is still being held pressed"
         elif self._state == 24:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been released"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} has been released"
         elif self._state == 25:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been slowly rotated clockwise"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} has been slowly rotated clockwise"
         elif self._state == 26:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been quickly rotated clockwise"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} has been quickly rotated clockwise"
         elif self._state == 27:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been slowly rotated counter-clockwise"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} has been slowly rotated counter-clockwise"
         elif self._state == 28:
-            self._human_readable_log = f"Button {self._push_button} of CEN+ object {self._object} has been quickly rotated counter-clockwise"
+            self._human_readable_log = f"Button {self.push_button} of CEN+ object {self.object} has been quickly rotated counter-clockwise"
     
     @property
     def is_short_pressed(self):

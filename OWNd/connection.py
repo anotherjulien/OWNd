@@ -314,6 +314,12 @@ class OWNEventSession(OWNSession):
         except AttributeError:
             self._logger.error("Received data could not be parsed into a message: %s", data.decode())
             return None
+        except ConnectionError as e:
+            self._logger.error("Connection error: %s", e)
+            return None
+        except Exception as e:
+            self._logger.error("Error: %s", e)
+            return None
 
     async def close(self):
         """ Closes the event connection to the OpenWebNet gateway """

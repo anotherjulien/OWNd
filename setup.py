@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="OWNd",
-    version="0.6.11",
+    version="0.6.12",
     author="anotherjulien",
     author_email="yetanotherjulien@gmail.com",
     description="Python interface for the OpenWebNet protocol",
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
