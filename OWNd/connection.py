@@ -86,7 +86,7 @@ class OWNGateway():
     @classmethod
     async def build_from_discovery_info(cls, discovery_info: dict):
 
-        if "address" in discovery_info and discovery_info["address"] is None and "ssdp_location" in discovery_info and discovery_info["ssdp_location"] is not None:
+        if (("address" not in discovery_info or discovery_info["address"] is None) and "ssdp_location" in discovery_info and discovery_info["ssdp_location"] is not None):
             discovery_info["address"] = urlparse(discovery_info["ssdp_location"]).hostname
         
         if "port" in discovery_info and discovery_info["port"] is None:

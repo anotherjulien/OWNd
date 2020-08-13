@@ -829,6 +829,50 @@ class OWNAutomationCommand(OWNCommand):
         message._human_readable_log = f"Setting shutter {where} position to {level}%."
         return message
 
+class OWNGatewayCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+    
+    @classmethod
+    def set_datetime_to_now(cls, time_zone: datetime.tzinfo):
+        now = datetime.datetime.now(time_zone)
+        timezone = f"0{substr(now.strftime('%z'), 1, 2)}" if substr(now.strftime('%z'), 0, 1) == "+" else f"1{substr(now.strftime('%z'), 1, 2)}"
+        message = cls(f"*#13**#22*{now.strftime('%H*%M*%S')}*{timezone}*0{now.strftime('%w*%d*%m*%Y##')}")
+        message._human_readable_log = f"Setting gateway time to {now}."
+        return message
+
+class OWNEnergyCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+    @classmethod
+    def start_sending_instant_power(cls, where, duration: int = 65):
+        duration = 255 if duration > 255 else duration
+        message = cls(f"*#18*{where}*#1200#1*{duration}##")
+        message._human_readable_log = f"Requesting instant power draw update from sensor {where} for {duration} minutes."
+        return message
+
+    @classmethod
+    def get_hourly_consumption(cls, where, date: datetime.date):
+        date_month = date.month
+        date_day = date.day
+        today = datetime.date.today()
+        one_year_ago = datetime.date(year=today.year-1, month=today.month, day=today.day)
+        if date < one_year_ago:
+            return None
+        message = cls(f"*#18*{where}*511#{date.month}#{date.day}##")
+        message._human_readable_log = f"Requesting hourly power consumption from sensor {where} for {date}."
+        return message
+
+    @classmethod
+    def get_partial_daily_consumption(cls, where):
+        message = cls(f"*#18*{where}*54##")
+        message._human_readable_log = f"Requesting today's partial power consumption from sensor {where}."
+        return message
+
+
 class OWNDryContactCommand(OWNCommand):
 
     def __init__(self, data):
