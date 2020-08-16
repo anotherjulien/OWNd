@@ -17,6 +17,6 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    install_requires=["aiohttp"],
+    install_requires=["aiohttp", "pytz"],
     python_requires='>=3.7',
 )

@@ -5,7 +5,7 @@ import logging
 from urllib.parse import urlparse
 
 from .discovery import find_gateways, get_gateway, get_port
-from .message import OWNSignaling, OWNEvent
+from .message import OWNMessage, OWNSignaling, OWNEvent
 
 
 class OWNGateway():
@@ -307,7 +307,7 @@ class OWNEventSession(OWNSession):
         It will read one frame and return it as an OWNMessage object """
         try:
             data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-            return OWNEvent.parse(data.decode())
+            return OWNMessage.parse(data.decode())
         except asyncio.IncompleteReadError:
             self._logger.warning("Incomplete read on the event bus: %s.", data.decode())
             return None
@@ -318,7 +318,7 @@ class OWNEventSession(OWNSession):
             self._logger.error("Connection error: %s", e)
             return None
         except Exception as e:
-            self._logger.error("Error: %s", e)
+            self._logger.error("Error: \"%s\" while parsing %s", e, data)
             return None
 
     async def close(self):
@@ -352,8 +352,8 @@ class OWNCommandSession(OWNSession):
             await self._stream_writer.drain()
             if not  is_status_request:
                 raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-                resulting_message = OWNSignaling(raw_response.decode())
-                if resulting_message.is_NACK():
+                resulting_message = OWNMessage.parse(raw_response.decode())
+                if isinstance(resulting_message, OWNSignaling) and resulting_message.is_NACK():
                     self._stream_writer.write(message_string)
                     await self._stream_writer.drain()
                     raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
@@ -362,7 +362,7 @@ class OWNCommandSession(OWNSession):
                         self._logger.error("Could not send message %s.", message)
                     elif resulting_message.is_ACK():
                         self._logger.info("Message %s was successfully sent.", message)
-                elif resulting_message.is_ACK():
+                elif isinstance(resulting_message, OWNSignaling) and resulting_message.is_ACK():
                     self._logger.info("Message %s was successfully sent.", message)
                 else:
                     self._logger.info("Message %s received response %s.", message,  resulting_message)
