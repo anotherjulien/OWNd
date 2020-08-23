@@ -1,6 +1,7 @@
 """ This module contains OpenWebNet messages definition """
 
 import datetime
+from dateutil.relativedelta import relativedelta
 import pytz
 import re
 
@@ -751,14 +752,28 @@ class OWNEnergyEvent(OWNEvent):
                     self._daily_consumption['date'] = _messageDate
                     self._daily_consumption['value'] = int(self._dimension_value[1])
                     self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._daily_consumption['value']} Wh for {self._daily_consumption['date']}."
-                    
+            elif self._dimension == 513 or self._dimension == 514:
+                _now = datetime.date.today()
+                _messageDate =  datetime.date(_now.year, int(self._dimension_param[0]), 1)
+                if self._dimension == 513 and _messageDate > _now:
+                    _messageDate.replace(year= _now.year - 1)
+                elif self._dimension == 514:
+                    if _messageDate > _now:
+                        _messageDate.replace(year= _now.year - 2)
+                    else:
+                        _messageDate.replace(year= _now.year - 1)
+                _messageDate.replace(day=self._dimension_value[0])
+                self._type = MESSAGE_TYPE_DAILY_CONSUMPTION
+                self._daily_consumption['date'] = _messageDate
+                self._daily_consumption['value'] = int(self._dimension_value[1])
+                self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._daily_consumption['value']} Wh for {self._daily_consumption['date']}."
             elif self._dimension == 54:
                 self._type = MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION
                 self._current_day_partial_consumption = int(self._dimension_value[0])
                 self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._current_day_partial_consumption} Wh up to now today."
             elif self._dimension == 52:
                 self._type = MESSAGE_TYPE_MONTHLY_CONSUMPTION
-                _messageDate =  datetime.date(int("20" + str(self._dimension_param[0])), self._dimension_param[1], 1)
+                _messageDate =  datetime.date(int(f"20{self._dimension_param[0]}"), self._dimension_param[1], 1)
                 self._monthly_consumption['date'] = _messageDate
                 self._monthly_consumption['value'] = int(self._dimension_value[0])
                 self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._monthly_consumption['value']} Wh for {self._monthly_consumption['date'].strftime('%B %Y')}."
@@ -1093,6 +1108,31 @@ class OWNEnergyCommand(OWNCommand):
         message = cls(f"*#18*{where}*54##")
         message._human_readable_log = f"Requesting today's partial power consumption from sensor {where}."
         return message
+
+    @classmethod
+    def get_daily_consumption(cls, where, year, month):
+        today = datetime.date.today()
+        one_year_ago = today - relativedelta(years=1)
+        two_year_ago = today - relativedelta(years=2)
+        target = datetime.date(year=year, month=month, day=1)
+        if target > today:
+            return None
+        elif target > one_year_ago:
+            message = cls(f"*18*59{month}*{where}##")
+        elif target > two_year_ago:
+            message = cls(f"*18*510{month}*{where}##")
+        else:
+            return None
+        message._human_readable_log = f"Requesting daily power consumption for {year}-{month} from sensor {where}."
+        return message
+
+    @classmethod
+    def get_monthly_consumption(cls, where, year, month):
+        message = cls(f"*#18*{where}*52#{str(year)[2:]}#{month}##")
+        message._human_readable_log = f"Requesting monthly power consumption for {year}-{month} from sensor {where}."
+        return message
+
+
 
 class OWNDryContactCommand(OWNCommand):
 

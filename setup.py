@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="OWNd",
-    version="0.6.13",
+    version="0.6.14",
     author="anotherjulien",
     author_email="yetanotherjulien@gmail.com",
     description="Python interface for the OpenWebNet protocol",
@@ -17,6 +17,6 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    install_requires=["aiohttp", "pytz"],
+    install_requires=["aiohttp", "pytz", "python-dateutil"],
     python_requires='>=3.7',
 )
