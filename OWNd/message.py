@@ -1118,9 +1118,9 @@ class OWNEnergyCommand(OWNCommand):
         if target > today:
             return None
         elif target > one_year_ago:
-            message = cls(f"*18*59{month}*{where}##")
+            message = cls(f"*18*59#{month}*{where}##")
         elif target > two_year_ago:
-            message = cls(f"*18*510{month}*{where}##")
+            message = cls(f"*18*510#{month}*{where}##")
         else:
             return None
         message._human_readable_log = f"Requesting daily power consumption for {year}-{month} from sensor {where}."
