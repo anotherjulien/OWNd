@@ -754,15 +754,19 @@ class OWNEnergyEvent(OWNEvent):
                     self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._daily_consumption['value']} Wh for {self._daily_consumption['date']}."
             elif self._dimension == 513 or self._dimension == 514:
                 _now = datetime.date.today()
-                _messageDate =  datetime.date(_now.year, int(self._dimension_param[0]), 1)
-                if self._dimension == 513 and _messageDate > _now:
-                    _messageDate.replace(year= _now.year - 1)
-                elif self._dimension == 514:
-                    if _messageDate > _now:
-                        _messageDate.replace(year= _now.year - 2)
+                _messageMonth = datetime.date(_now.year, int(self._dimension_param[0]), 1)
+                try:
+                    if self._dimension == 513 and _messageMonth > _now:
+                        _messageDate = datetime.date(_now.year - 1, int(self._dimension_param[0]), int(self._dimension_value[0]))
+                    elif self._dimension == 514:
+                        if _messageMonth > _now:
+                            _messageDate = datetime.date(_now.year - 2, int(self._dimension_param[0]), int(self._dimension_value[0]))
+                        else:
+                            _messageDate = datetime.date(_now.year - 1, int(self._dimension_param[0]), int(self._dimension_value[0]))
                     else:
-                        _messageDate.replace(year= _now.year - 1)
-                _messageDate.replace(day=int(self._dimension_value[0]))
+                        _messageDate = datetime.date(_now.year, int(self._dimension_param[0]), int(self._dimension_value[0]))
+                except ValueError as e:
+                    return None
                 self._type = MESSAGE_TYPE_DAILY_CONSUMPTION
                 self._daily_consumption['date'] = _messageDate
                 self._daily_consumption['value'] = int(self._dimension_value[1])
