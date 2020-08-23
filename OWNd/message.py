@@ -744,7 +744,7 @@ class OWNEnergyEvent(OWNEvent):
                 if int(self._dimension_value[0]) != 25:
                     self._type = MESSAGE_TYPE_HOURLY_CONSUMPTION
                     self._hourly_consumption['date'] = _messageDate
-                    self._hourly_consumption['hour'] = int(self._dimension_value[0])
+                    self._hourly_consumption['hour'] = int(self._dimension_value[0])-1
                     self._hourly_consumption['value'] = int(self._dimension_value[1])
                     self._human_readable_log = f"Sensor {self._sensor} is reporting a power consumtion of {self._hourly_consumption['value']} Wh for {self._hourly_consumption['date']} at {self._hourly_consumption['hour']}."
                 else:
