@@ -762,7 +762,7 @@ class OWNEnergyEvent(OWNEvent):
                         _messageDate.replace(year= _now.year - 2)
                     else:
                         _messageDate.replace(year= _now.year - 1)
-                _messageDate.replace(day=self._dimension_value[0])
+                _messageDate.replace(day=int(self._dimension_value[0]))
                 self._type = MESSAGE_TYPE_DAILY_CONSUMPTION
                 self._daily_consumption['date'] = _messageDate
                 self._daily_consumption['value'] = int(self._dimension_value[1])
