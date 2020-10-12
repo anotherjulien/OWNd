@@ -383,6 +383,212 @@ class OWNHeatingEvent(OWNEvent):
     def __init__(self, data):
         super().__init__(data)
 
+        self._zone = int(self._where[1:]) if self._where.startswith('#') else int(self._where)
+        self._sensor = None
+        if self._zone > 99:
+            self._sensor = int(str(self._zone)[:1])
+            self._zone = int(str(self._zone)[1:])
+        
+        self._mode = None
+        self._set_temperature = None
+        self._local_offset = None
+        self._local_set_temperature = None
+        self._measured_temperature = None
+        self._secondary_temperature = None
+
+        self._is_active = None
+        self._is_heating = None
+        self._is_cooling = None
+
+        self._fan_on = None
+        self._fan_speed = None
+        self._cooling_fan_on = None
+        self._cooling_fan_speed = None
+
+        _valve_active_states = ["1", "2", "6", "7", "8"]
+        _actuator_active_states = ["1", "2", "6", "7", "8", "9"]
+
+        if self._what is not None:
+            self._mode = int(self._what)
+
+        if self._dimension == 0:    #Temperature
+            if self._sensor is None:
+                self._measured_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+                self._human_readable_log = f"Zone {self._zone}'s main sensor is reporting a temperature of {self._measured_temperature}°C."
+            else:
+                self._secondary_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+                self._human_readable_log = f"Zone {self._zone}'s secondary sensor {self._sensor} is reporting a temperature of {self._secondary_temperature}°C."
+
+        elif self._dimension == 11: #Fan speed
+            _fan_mode = int(self._dimention_param[0])
+            if _fan_mode < 4:
+                self._fan_on = True
+                self._is_active = True
+                if _fan_mode > 0:
+                    self._fan_speed = _fan_mode
+                    self._human_readable_log = f"Zone {self._zone}'s fan is on at speed {self._fan_speed}."
+                else:
+                    self._human_readable_log = f"Zone {self._zone}'s fan is on at 'Auto' speed."
+            else:
+                self._fan_on = False
+                self._is_active = False
+                self._human_readable_log = f"Zone {self._zone}'s fan is off."
+
+        elif self._dimension == 12: #Set temperature
+            self._local_set_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+
+        elif self._dimension == 13: #Local offset
+            if (self._dimention_param[0] == "0" or self._dimention_param[0] == "00" or self._dimention_param[0] == "4" or self._dimention_param[0] == "5"):
+                self._local_offset = 0
+            elif self._dimention_param[0].startswith('0'):
+                self._local_offset = int(f"+{self._dimention_param[0][1:]}")
+            else:
+                self._local_offset = int(f"-{self._dimention_param[0][1:]}")
+
+        elif self._dimension == 14: #Local set temperature (set+offset)
+            self._set_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+
+        elif self._dimension == 19: #Valves status
+            self._is_cooling = self._dimention_param[0] in _valve_active_states
+            self._is_heating = self._dimention_param[1] in _valve_active_states
+            self._is_active = self._is_cooling | self._is_heating
+            # Handle cooling valve status relative to fan speed/status
+            _cooling_value = int(self._dimention_param[0])
+            if _cooling_value == 0:
+                self._human_readable_log = f"Zone {self._zone}'s cooling valve is off"
+            elif _cooling_value == 1:
+                self._human_readable_log = f"Zone {self._zone}'s cooling valve is on"
+            elif _cooling_value == 2:
+                self._human_readable_log = f"Zone {self._zone}'s cooling valve is opened"
+            elif _cooling_value == 3:
+                self._human_readable_log = f"Zone {self._zone}'s cooling valve is closed"
+            elif _cooling_value == 4:
+                self._human_readable_log = f"Zone {self._zone}'s cooling valve is stopped"
+            elif _cooling_value > 4:
+                _fan_mode = _cooling_value - 5
+                if _fan_mode > 0:
+                    self._cooling_fan_on = True
+                    self._is_active = True
+                    self._cooling_fan_speed = _fan_mode
+                    self._human_readable_log = f"Zone {self._zone}'s cooling fan is on at speed {self._fan_speed}"
+                else:
+                    self._cooling_fan_on = False
+                    self._is_active = False
+                    self._human_readable_log = f"Zone {self._zone}'s cooling fan is off"
+            # Handle heating valve status relative to fan speed/status
+            _heating_value = int(self._dimention_param[0])
+            if _heating_value == 0:
+                self._human_readable_log += "; heating valve is off."
+            elif _heating_value == 1:
+                self._human_readable_log += "; heating valve is on."
+            elif _heating_value == 2:
+                self._human_readable_log += "; heating valve is opened."
+            elif _heating_value == 3:
+                self._human_readable_log += "; heating valve is closed."
+            elif _heating_value == 4:
+                self._human_readable_log += "; heating valve is stopped."
+            elif _heating_value > 4:
+                _fan_mode = _heating_value - 5
+                if _fan_mode > 0:
+                    self._fan_on = True
+                    self._is_active = True
+                    self._fan_speed = _fan_mode
+                    self._human_readable_log += f"; heating fan is on at speed {self._fan_speed}."
+                else:
+                    self._fan_on = False
+                    self._is_active = False
+                    self._human_readable_log += "; heating fan is off."
+
+        elif self._dimension == 20: #Actuator status
+            self._is_active = self._dimention_param[0] in _actuator_active_states
+            _value = int(self._dimention_param[0])
+            if _value == 0:
+                self._human_readable_log = f"Zone {self._zone}'s actuator is off."
+            elif _value == 1:
+                self._human_readable_log = f"Zone {self._zone}'s actuator is on."
+            elif _value == 2:
+                self._human_readable_log = f"Zone {self._zone}'s actuator is opened."
+            elif _value == 3:
+                self._human_readable_log = f"Zone {self._zone}'s actuator is closed."
+            elif _value == 4:
+                self._human_readable_log = f"Zone {self._zone}'s actuator is stopped."
+            elif _value > 4:
+                _fan_mode = _value - 5
+                if _fan_mode > 0:
+                    self._fan_on = True
+                    self._is_active = True
+                    if _fan_mode < 4:
+                        self._fan_speed = _fan_mode
+                        self._human_readable_log = f"Zone {self._zone}'s fan is on at speed {self._fan_speed}."
+                    else:
+                        self._human_readable_log = f"Zone {self._zone}'s fan is on at 'Auto' speed."
+                else:
+                    self._fan_on = False
+                    self._is_active = False
+                    self._human_readable_log = f"Zone {self._zone}'s fan is off."
+
+    @property
+    def zone(self) -> int:
+        return self._zone
+
+    def is_mode(self) -> bool:
+        return self._mode is not None
+
+    @property
+    def mode(self) -> str:
+        if self._mode in [103,203,303,102,202,302]:
+            return "off"
+        elif self._mode in [0,210,211,215] or (self._mode >= 2101 and self._mode <= 2103) or (self._mode >= 2201 and self._mode <= 2216):
+            return "cool"
+        elif self._mode in [1,110,111,115] or (self._mode >= 1101 and self._mode <= 1103) or (self._mode >= 1201 and self._mode <= 1216):
+            return "heat"
+        elif (self._mode >= 23001 and self._mode <= 23255) or (self._mode >= 13001 and self._mode <= 13255):
+            return "auto"
+        else:
+            return None
+
+    def is_active(self) -> bool:
+        return self._is_active
+    
+    def is_main_temperature_measurement(self) -> bool:
+        return self._measured_temperature is not None
+
+    @property
+    def main_temperature(self) -> float:
+        return self._measured_temperature
+
+    def is_secondary_temperature_measurement(self) -> bool:
+        return self._sensor is not None
+
+    @property
+    def secondary_temperature(self) -> tuple[int,float]:
+        return [self._sensor, self._secondary_temperature]
+
+    def is_set_temperature(self) -> bool:
+        return self._set_temperature is not None
+    
+    @property
+    def set_temperature(self) -> float:
+        return self._set_temperature
+
+    def is_local_offset(self) -> bool:
+        return self._local_offset is not None
+    
+    @property
+    def local_offset(self) -> int:
+        return self._local_offset
+
+    def is_local_set_temperature(self) -> bool:
+        return self._local_set_temperature is not None
+    
+    @property
+    def local_set_temperature(self) -> float:
+        return self._local_set_temperature
+    
+
+    
+
+
 class OWNAlarmEvent(OWNEvent):
 
     def __init__(self, data):
@@ -1140,8 +1346,6 @@ class OWNEnergyCommand(OWNCommand):
         message = cls(f"*#18*{where}*52#{str(year)[2:]}#{month}##")
         message._human_readable_log = f"Requesting monthly power consumption for {year}-{month} from sensor {where}."
         return message
-
-
 
 class OWNDryContactCommand(OWNCommand):
 
