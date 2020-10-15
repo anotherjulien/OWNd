@@ -542,7 +542,7 @@ class OWNHeatingEvent(OWNEvent):
             return "cool"
         elif self._mode in [1,110,111,115] or (self._mode >= 1101 and self._mode <= 1103) or (self._mode >= 1201 and self._mode <= 1216):
             return "heat"
-        elif (self._mode >= 23001 and self._mode <= 23255) or (self._mode >= 13001 and self._mode <= 13255):
+        elif self._mode in [310,311,315] or (self._mode >= 23001 and self._mode <= 23255) or (self._mode >= 13001 and self._mode <= 13255):
             return "auto"
         else:
             return None
