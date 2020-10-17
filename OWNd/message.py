@@ -12,6 +12,11 @@ MESSAGE_TYPE_MONTHLY_CONSUMPTION = "monthly_consumption"
 MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION = "current_day_partial_consumption"
 MESSAGE_TYPE_CURRENT_MONTH_CONSUMPTION = "current_month_partial_consumption"
 
+CLIMATE_MODE_OFF = "off"
+CLIMATE_MODE_HEAT = "heat"
+CLIMATE_MODE_COOL = "cool"
+CLIMATE_MODE_AUTO = "auto"
+
 class OWNMessage():
 
     _ACK = re.compile(r"^\*#\*1##$") #  *#*1##
@@ -537,13 +542,13 @@ class OWNHeatingEvent(OWNEvent):
     @property
     def mode(self) -> str:
         if self._mode in [103,203,303,102,202,302]:
-            return "off"
+            return CLIMATE_MODE_OFF
         elif self._mode in [0,210,211,215] or (self._mode >= 2101 and self._mode <= 2103) or (self._mode >= 2201 and self._mode <= 2216):
-            return "cool"
+            return CLIMATE_MODE_COOL
         elif self._mode in [1,110,111,115] or (self._mode >= 1101 and self._mode <= 1103) or (self._mode >= 1201 and self._mode <= 1216):
-            return "heat"
+            return CLIMATE_MODE_HEAT
         elif self._mode in [310,311,315] or (self._mode >= 23001 and self._mode <= 23255) or (self._mode >= 13001 and self._mode <= 13255):
-            return "auto"
+            return CLIMATE_MODE_AUTO
         else:
             return None
 
@@ -584,10 +589,6 @@ class OWNHeatingEvent(OWNEvent):
     @property
     def local_set_temperature(self) -> float:
         return self._local_set_temperature
-    
-
-    
-
 
 class OWNAlarmEvent(OWNEvent):
 
@@ -1223,6 +1224,63 @@ class OWNAutomationCommand(OWNCommand):
     def set_shutter_level(cls, where, level=30):
         message = cls(f"*#2*{where}*#11#001*{level}##")
         message._human_readable_log = f"Setting shutter {where} position to {level}%."
+        return message
+
+class OWNHeatingCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+    @classmethod
+    def status(cls, where):
+        message = cls(f"*#4*{where}##")
+        message._human_readable_log = f"Requesting climate status update for {where}."
+        return message
+
+    @classmethod
+    def set_mode(cls, where, mode: str):
+        zone = int(where[1:]) if where.startswith('#') else int(where)
+        zone_name = f"zone {zone}" if zone > 0 else "general"
+
+        mode_name = mode
+        if mode == CLIMATE_MODE_OFF:
+            mode = 303
+        elif mode == CLIMATE_MODE_AUTO:
+            mode = 311
+        else:
+            return None
+
+        message = cls(f"*4*{mode}*#{zone}##")
+        message._human_readable_log = f"Setting {zone_name} mode to '{mode_name}'."
+        return message
+
+    @classmethod
+    def turn_off(cls, where):
+        return cls.set_mode(cls, where=where, mode=CLIMATE_MODE_OFF)
+
+    @classmethod
+    def set_temperature(cls, where, temperature: float, mode: str):
+        zone = int(where[1:]) if where.startswith('#') else int(where)
+        zone_name = f"zone {zone}" if zone > 0 else "general"
+
+        temperature = round(temperature * 2) / 2
+        if temperature < 5.0:
+            temperature = 5.0
+        elif temperature > 40.0:
+            temperature = 40.0
+        temperature_print = f"{temperature}"
+        temperature = int(temperature * 10)
+
+        mode_name = mode
+        if mode == CLIMATE_MODE_HEAT:
+            mode = 1
+        elif mode == CLIMATE_MODE_COOL:
+            mode = 2
+        elif mode == CLIMATE_MODE_AUTO:
+            mode = 3
+
+        message = cls(f"*#4*#{zone}*#14*{temperature:04d}*{mode}##")
+        message._human_readable_log = f"Setting {zone_name} to {temperature_print}°C in mode '{mode_name}'."
         return message
 
 class OWNGatewayCommand(OWNCommand):
