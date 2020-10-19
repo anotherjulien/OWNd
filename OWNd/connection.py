@@ -225,7 +225,6 @@ class OWNSession():
             if resulting_message.is_nonce():
                 ra = resulting_message.nonce
                 self._logger.debug("Received Ra: %s", ra)
-                ra = resulting_message.nonce
                 if self._gateway.password is None:
                     error_message = "password_required"
                     self._logger.warning("Connection requires a password but none was provided, trying default.")
@@ -341,20 +340,20 @@ class OWNSession():
     def _encode_hmac_password(self, method: str, password: str, nonce_a: str, nonce_b: str):
         if method == 'sha1':
             message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + "736F70653E" + "636F70653E" + hashlib.sha1(password.encode()).hexdigest()
-            return self._hex_string_to_int_string(hashlib.sha1(message.encode()))
+            return self._hex_string_to_int_string(hashlib.sha1(message.encode()).hexdigest())
         elif method == 'sha256':
             message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + "736F70653E" + "636F70653E" + hashlib.sha256(password.encode()).hexdigest()
-            return self._hex_string_to_int_string(hashlib.sha256(message.encode()))
+            return self._hex_string_to_int_string(hashlib.sha256(message.encode()).hexdigest())
         else:
             return None
 
     def _decode_hmac_response(self, method: str, password: str, nonce_a: str, nonce_b: str):
         if method == 'sha1':
             message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + hashlib.sha1(password.encode()).hexdigest()
-            return self._hex_string_to_int_string(hashlib.sha1(message.encode()))
+            return self._hex_string_to_int_string(hashlib.sha1(message.encode()).hexdigest())
         elif method == 'sha256':
             message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + hashlib.sha256(password.encode()).hexdigest()
-            return self._hex_string_to_int_string(hashlib.sha256(message.encode()))
+            return self._hex_string_to_int_string(hashlib.sha256(message.encode()).hexdigest())
         else:
             return None
 
