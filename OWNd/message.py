@@ -566,7 +566,7 @@ class OWNHeatingEvent(OWNEvent):
         return self._sensor is not None
 
     @property
-    def secondary_temperature(self) -> tuple[int,float]:
+    def secondary_temperature(self):
         return [self._sensor, self._secondary_temperature]
 
     def is_set_temperature(self) -> bool:
