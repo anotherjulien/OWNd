@@ -168,8 +168,10 @@ def _get_soap_body(ns: str, action: str) -> str:
     """
     return soap_body
 
-async def get_port(host: str) -> int:
+async def get_port(SCPD_location: str) -> int:
 
+    host = urlparse(SCPD_location).netloc
+    scheme = urlparse(SCPD_location).scheme
     async with aiohttp.ClientSession() as session:
         
         service_ns = "urn:schemas-bticino-it:service:openserver:1"
@@ -184,7 +186,7 @@ async def get_port(host: str) -> int:
             'Content-Length': str(len(soap_body)),
         }
 
-        ctrl_url = f"{host}/{service_control}"
+        ctrl_url = f"{scheme}://{host}/{service_control}"
         resp = await session.post(ctrl_url, data=soap_body, headers=headers)
         soap_response = xml.dom.minidom.parseString(await resp.text()).documentElement
         await session.close()
@@ -209,7 +211,7 @@ async def _get_scpd_details(SCPD_location: str) -> dict:
         discovery_info["serialNumber"] = scpd_xml.getElementsByTagName("serialNumber")[0].childNodes[0].data
         discovery_info["UDN"] = scpd_xml.getElementsByTagName("UDN")[0].childNodes[0].data
 
-        discovery_info["port"] = await get_port(urlparse(SCPD_location).netloc)
+        discovery_info["port"] = await get_port(SCPD_location)
 
         await session.close()
 
