@@ -208,12 +208,15 @@ class OWNSession():
             self._logger.debug("Received SHA challenge: %s", resulting_message)
             #self._logger.error("Error while opening %s session: HMAC authentication not supported.", self._type)
             if resulting_message.is_SHA_1():
+                self._logger.debug("Detected SHA-1 method.")
                 method = "sha1"
                 rb_size = 80
             elif resulting_message.is_SHA_256():
+                self._logger.debug("Detected SHA-256 method.")
                 method = "sha256"
                 rb_size = 128
             rb = ''.join(random.choices(string.digits, k = rb_size))
+            self._logger.debug(f"Generated Rb :{rb}.")
             self._logger.debug("Accepting challenge.")
             self._stream_writer.write("*#*1##")
             await self._stream_writer.drain()
