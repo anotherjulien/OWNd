@@ -218,7 +218,7 @@ class OWNSession():
             rb = ''.join(random.choices(string.digits, k = rb_size))
             self._logger.debug(f"Generated Rb :{rb}.")
             self._logger.debug("Accepting challenge.")
-            self._stream_writer.write("*#*1##")
+            self._stream_writer.write("*#*1##".encode())
             await self._stream_writer.drain()
             raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             resulting_message = OWNSignaling(raw_response.decode())
@@ -241,10 +241,10 @@ class OWNSession():
                     self._logger.debug("Received HMAC response.")
                     hmac_response = resulting_message.nonce
                     if hmac_response == self._decode_hmac_response(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb):
-                        self._stream_writer.write("*#*1##")
+                        self._stream_writer.write("*#*1##".encode())
                         await self._stream_writer.drain()
                     else:
-                        self._stream_writer.write("*#*0##")
+                        self._stream_writer.write("*#*0##".encode())
                         await self._stream_writer.drain()
                         error = True
                         error_message = "negociation_error"
