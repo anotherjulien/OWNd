@@ -134,7 +134,8 @@ class SimpleServiceDiscoveryProtocol(asyncio.DatagramProtocol):
                 response.headers_dictionary['USN'].startswith("uuid:pnp-scheduler201-") or 
                 response.headers_dictionary['USN'].startswith("uuid:pnp-touchscreen-") or 
                 response.headers_dictionary['USN'].startswith("uuid:pnp-myhomeserver1-") or 
-                response.headers_dictionary['USN'].startswith("uuid:pnp-IPscenariomodule-")):
+                response.headers_dictionary['USN'].startswith("uuid:upnp-Basic gateway-") or 
+                response.headers_dictionary['USN'].startswith("uuid:upnp-IPscenariomodule-")):
 
                 self._recvq.put_nowait({"address": addr[0], "ssdp_location": response.headers_dictionary['LOCATION'], "ssdp_st": response.headers_dictionary['ST']})
 
