@@ -216,14 +216,15 @@ class OWNSession():
                 method = "sha256"
                 rb_size = 128
             rb = ''.join(random.choices(string.digits, k = rb_size))
-            self._logger.debug(f"Generated Rb :{rb}.")
+            self._logger.debug("Generated Rb: %s", rb)
             self._logger.debug("Accepting challenge.")
             self._stream_writer.write("*#*1##".encode())
             await self._stream_writer.drain()
             raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             resulting_message = OWNSignaling(raw_response.decode())
             if resulting_message.is_nonce():
-                self._logger.debug("Received Ra: %s", resulting_message)
+                ra = resulting_message.nonce
+                self._logger.debug("Received Ra: %s", ra)
                 ra = resulting_message.nonce
                 if self._gateway.password is None:
                     error_message = "password_required"
