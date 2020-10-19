@@ -4,6 +4,7 @@ import errno
 import logging
 import socket
 import xml.dom.minidom
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -167,7 +168,7 @@ def _get_soap_body(ns: str, action: str) -> str:
     """
     return soap_body
 
-async def get_port(SCPD_location: str) -> int:
+async def get_port(host: str) -> int:
 
     async with aiohttp.ClientSession() as session:
         
@@ -178,12 +179,12 @@ async def get_port(SCPD_location: str) -> int:
         soap_action = f"{service_ns}#{service_action}"
         headers = {
             'SOAPAction': f'"{soap_action}"',
-            'Host': f"{SCPD_location[7:-1]}",
+            'Host': f"{host}",
             'Content-Type': 'text/xml',
             'Content-Length': str(len(soap_body)),
         }
 
-        ctrl_url = f"{SCPD_location}{service_control}"
+        ctrl_url = f"{host}/{service_control}"
         resp = await session.post(ctrl_url, data=soap_body, headers=headers)
         soap_response = xml.dom.minidom.parseString(await resp.text()).documentElement
         await session.close()
@@ -208,7 +209,7 @@ async def _get_scpd_details(SCPD_location: str) -> dict:
         discovery_info["serialNumber"] = scpd_xml.getElementsByTagName("serialNumber")[0].childNodes[0].data
         discovery_info["UDN"] = scpd_xml.getElementsByTagName("UDN")[0].childNodes[0].data
 
-        discovery_info["port"] = await get_port(SCPD_location)
+        discovery_info["port"] = await get_port(urlparse(SCPD_location).netloc)
 
         await session.close()
 
