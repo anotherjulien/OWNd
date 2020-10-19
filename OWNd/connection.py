@@ -1,6 +1,7 @@
 """ This module handles TCP connections to the OpenWebNet gateway """
 
 import asyncio
+import hmac
 import hashlib
 import string 
 import random
@@ -203,19 +204,15 @@ class OWNSession():
             self._logger.debug("Reply: %s", resulting_message)
             self._logger.error("Error while opening %s session.", self._type)
         elif resulting_message.is_SHA():
-            #error = True
-            #error_message = "unsupported_authentication"
             self._logger.debug("Received SHA challenge: %s", resulting_message)
-            #self._logger.error("Error while opening %s session: HMAC authentication not supported.", self._type)
             if resulting_message.is_SHA_1():
                 self._logger.debug("Detected SHA-1 method.")
                 method = "sha1"
-                rb_size = 80
             elif resulting_message.is_SHA_256():
                 self._logger.debug("Detected SHA-256 method.")
                 method = "sha256"
-                rb_size = 128
-            rb = ''.join(random.choices(string.digits, k = rb_size))
+            key = ''.join(random.choices(string.digits, k = 56))
+            rb = self._hex_string_to_int_string(hmac.new(key=key.encode(), digestmod=method).hexdigest())
             self._logger.debug("Generated Rb: %s", rb)
             self._logger.debug("Accepting challenge.")
             self._stream_writer.write("*#*1##".encode())
