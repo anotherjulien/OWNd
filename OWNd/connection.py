@@ -1,6 +1,9 @@
 """ This module handles TCP connections to the OpenWebNet gateway """
 
 import asyncio
+import hashlib
+import string 
+import random
 import logging
 from urllib.parse import urlparse
 
@@ -200,10 +203,54 @@ class OWNSession():
             self._logger.debug("Reply: %s", resulting_message)
             self._logger.error("Error while opening %s session.", self._type)
         elif resulting_message.is_SHA():
-            error = True
-            error_message = "unsupported_authentication"
+            #error = True
+            #error_message = "unsupported_authentication"
             self._logger.debug("Received SHA challenge: %s", resulting_message)
-            self._logger.error("Error while opening %s session: HMAC authentication not supported.", self._type)
+            #self._logger.error("Error while opening %s session: HMAC authentication not supported.", self._type)
+            if resulting_message.is_SHA_1():
+                method = "sha1"
+                rb_size = 80
+            elif resulting_message.is_SHA_256():
+                method = "sha256"
+                rb_size = 128
+            rb = ''.join(random.choices(string.digits, k = rb_size))
+            self._logger.debug("Accepting challenge.")
+            self._stream_writer.write("*#*1##")
+            await self._stream_writer.drain()
+            raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+            resulting_message = OWNSignaling(raw_response.decode())
+            if resulting_message.is_nonce():
+                self._logger.debug("Received Ra: %s", resulting_message)
+                ra = resulting_message.nonce
+                if self._gateway.password is None:
+                    error_message = "password_required"
+                    self._logger.warning("Connection requires a password but none was provided, trying default.")
+                    default_password_used = True
+                    hashedPass = f"*#{rb}*{self._encode_hmac_password(method=method, password=default_password, nonce_a=ra, nonce_b=rb)}##"
+                else:
+                    hashedPass = f"*#{rb}*{self._encode_hmac_password(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb)}##"
+                self._logger.debug("Sending %s session password.", self._type)
+                self._stream_writer.write(hashedPass.encode())
+                await self._stream_writer.drain()
+                raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                resulting_message = OWNSignaling(raw_response.decode())
+                if resulting_message.is_nonce():
+                    self._logger.debug("Received HMAC response.")
+                    hmac_response = resulting_message.nonce
+                    if hmac_response == self._decode_hmac_response(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb):
+                        self._stream_writer.write("*#*1##")
+                        await self._stream_writer.drain()
+                    else:
+                        self._stream_writer.write("*#*0##")
+                        await self._stream_writer.drain()
+                        error = True
+                        error_message = "negociation_error"
+                        self._logger.error("Error while opening %s session: HMAC authentication failed.", self._type)
+                elif resulting_message.is_NACK():
+                    error = True
+                    if error_message != "password_required":
+                        error_message = "password_error"
+                    self._logger.error("Password error while opening %s session.", self._type)
         elif resulting_message.is_nonce():
             self._logger.debug("Received nonce: %s", resulting_message)
             if self._gateway.password is None:
@@ -235,7 +282,7 @@ class OWNSession():
 
         return {"Success": not error, "Message": error_message}
 
-    def _get_own_password (self, password, nonce, test=False) :
+    def _get_own_password(self, password, nonce, test=False):
         start = True    
         num1 = 0
         num2 = 0
@@ -286,6 +333,38 @@ class OWNSession():
                 print("     num1: %08x num2: %08x" % (num1, num2))
             num2 = num1
         return num1
+
+    def _encode_hmac_password(self, method: str, password: str, nonce_a: str, nonce_b: str):
+        if method == 'sha1':
+            message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + "736F70653E" + "636F70653E" + hashlib.sha1(password.encode()).hexdigest()
+            return self._hex_string_to_int_string(hashlib.sha1(message.encode()))
+        elif method == 'sha256':
+            message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + "736F70653E" + "636F70653E" + hashlib.sha256(password.encode()).hexdigest()
+            return self._hex_string_to_int_string(hashlib.sha256(message.encode()))
+        else:
+            return None
+
+    def _decode_hmac_response(self, method: str, password: str, nonce_a: str, nonce_b: str):
+        if method == 'sha1':
+            message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + hashlib.sha1(password.encode()).hexdigest()
+            return self._hex_string_to_int_string(hashlib.sha1(message.encode()))
+        elif method == 'sha256':
+            message = self._int_string_to_hex_string(nonce_a) + self._int_string_to_hex_string(nonce_b) + hashlib.sha256(password.encode()).hexdigest()
+            return self._hex_string_to_int_string(hashlib.sha256(message.encode()))
+        else:
+            return None
+
+    def _int_string_to_hex_string(self, int_string: str) -> str:
+        hex_string = ""
+        for i in range(0, len(int_string), 2):
+            hex_string += f"{int(int_string[i:i+2]):x}"
+        return hex_string
+
+    def _hex_string_to_int_string(self, hex_string: str) -> str:
+        int_string = ""
+        for i in range(0, len(hex_string), 1):
+            int_string += f"{int(hex_string[i:i+1], 16):0>2d}"
+        return int_string
 
 class OWNEventSession(OWNSession):
 

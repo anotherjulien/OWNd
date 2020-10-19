@@ -1440,8 +1440,8 @@ class OWNSignaling(OWNMessage):
         elif self._SHA.match(self._raw):
             self._match = self._SHA.match(self._raw)
             self._family = 'SIGNALING'
-            self._type = 'SHA'
-            self._human_readable_log = f"SHA{'-1' if self._match.group(1) else '-256'} challenge received."
+            self._type = f"SHA{'-1' if self._match.group(1) == '1' else '-256'}"
+            self._human_readable_log = f"SHA{'-1' if self._match.group(1) == '1' else '-256'} challenge received."
         elif self._COMMAND_SESSION.match(self._raw):
             self._match = self._COMMAND_SESSION.match(self._raw)
             self._family = 'SIGNALING'
@@ -1479,4 +1479,10 @@ class OWNSignaling(OWNMessage):
         return self._type == 'NONCE'
 
     def is_SHA(self) -> bool:
-        return self._type == 'SHA'
+        return self._type == 'SHA-1' or self._type == 'SHA-256'
+
+    def is_SHA_1(self) -> bool:
+        return self._type == 'SHA-1'
+
+    def is_SHA_256(self) -> bool:
+        return self._type == 'SHA-256'

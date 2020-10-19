@@ -35,7 +35,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--address", type=str, help="IP address of the OpenWebNet gateway")
     parser.add_argument("-p", "--port", type=int, help="TCP port to connectect the gateway, default is 20000")
-    parser.add_argument("-P", "--password", type=str, help="Numeric password for the OpenWebNet connection, default is 12345 (HMAC passwords are not supported)")
+    parser.add_argument("-P", "--password", type=str, help="Numeric password for the OpenWebNet connection, default is 12345")
     parser.add_argument("-m", "--mac", type=str, help="MAC address of the gateway (to be used as ID, if  not found via SSDP)")
     parser.add_argument("-v", "--verbose", type=int, help="Change output verbosity [0 = WARNING; 1 = INFO (default); 2 = DEBUG]")
     args = parser.parse_args()
