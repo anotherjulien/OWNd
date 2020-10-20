@@ -249,7 +249,6 @@ class OWNSession():
                             self._logger.error("Error while opening %s session: HMAC authentication failed.", self._type)
                 except asyncio.IncompleteReadError as er:
                     error = True
-                    print(er.partial)
                     if error_message != "password_required":
                         error_message = "password_error"
                     self._logger.error("Password error while opening %s session.", self._type)
