@@ -206,6 +206,7 @@ class OWNSession():
         elif resulting_message.is_SHA():
             self._logger.debug("Received SHA challenge: %s", resulting_message)
             if self._gateway.password is None:
+                    error = True
                     error_message = "password_required"
                     self._logger.warning("Connection requires a password but none was provided.")
                     self._stream_writer.write("*#*0##".encode())
