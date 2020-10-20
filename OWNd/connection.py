@@ -231,23 +231,25 @@ class OWNSession():
                     hashedPass = f"*#{rb}*{self._encode_hmac_password(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb)}##"
                 self._logger.debug("Sending %s session password.", self._type)
                 self._stream_writer.write(hashedPass.encode())
-                await self._stream_writer.drain()
-                raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-                resulting_message = OWNSignaling(raw_response.decode())
-                if resulting_message.is_nonce():
-                    self._logger.debug("Received HMAC response.")
-                    hmac_response = resulting_message.nonce
-                    if hmac_response == self._decode_hmac_response(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb):
-                        self._stream_writer.write("*#*1##".encode())
-                        await self._stream_writer.drain()
-                    else:
-                        self._stream_writer.write("*#*0##".encode())
-                        await self._stream_writer.drain()
-                        error = True
-                        error_message = "negociation_error"
-                        self._logger.error("Error while opening %s session: HMAC authentication failed.", self._type)
-                elif resulting_message.is_NACK():
+                await self._stream_writer.drain() 
+                try:
+                    raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                    resulting_message = OWNSignaling(raw_response.decode())
+                    if resulting_message.is_nonce():
+                        self._logger.debug("Received HMAC response.")
+                        hmac_response = resulting_message.nonce
+                        if hmac_response == self._decode_hmac_response(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb):
+                            self._stream_writer.write("*#*1##".encode())
+                            await self._stream_writer.drain()
+                        else:
+                            self._stream_writer.write("*#*0##".encode())
+                            await self._stream_writer.drain()
+                            error = True
+                            error_message = "negociation_error"
+                            self._logger.error("Error while opening %s session: HMAC authentication failed.", self._type)
+                except asyncio.IncompleteReadError as er:
                     error = True
+                    print(er.partial)
                     if error_message != "password_required":
                         error_message = "password_error"
                     self._logger.error("Password error while opening %s session.", self._type)
