@@ -211,7 +211,10 @@ async def _get_scpd_details(SCPD_location: str) -> dict:
         discovery_info["serialNumber"] = scpd_xml.getElementsByTagName("serialNumber")[0].childNodes[0].data
         discovery_info["UDN"] = scpd_xml.getElementsByTagName("UDN")[0].childNodes[0].data
 
-        discovery_info["port"] = await get_port(SCPD_location)
+        try:
+            discovery_info["port"] = await get_port(SCPD_location)
+        except aiohttp.client_exceptions.ServerDisconnectedError:
+            discovery_info["port"] = 20000
 
         await session.close()
 
