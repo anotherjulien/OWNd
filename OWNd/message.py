@@ -552,8 +552,17 @@ class OWNHeatingEvent(OWNEvent):
         else:
             return None
 
+    def is_activity(self) -> bool:
+        return self._is_active is not None
+
     def is_active(self) -> bool:
         return self._is_active
+
+    def is_heating(self) -> bool:
+        return self._is_heating
+
+    def is_cooling(self) -> bool:
+        return self._is_cooling
     
     def is_main_temperature_measurement(self) -> bool:
         return self._measured_temperature is not None
