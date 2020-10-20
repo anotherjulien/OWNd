@@ -205,53 +205,54 @@ class OWNSession():
             self._logger.error("Error while opening %s session.", self._type)
         elif resulting_message.is_SHA():
             self._logger.debug("Received SHA challenge: %s", resulting_message)
-            if resulting_message.is_SHA_1():
-                self._logger.debug("Detected SHA-1 method.")
-                method = "sha1"
-            elif resulting_message.is_SHA_256():
-                self._logger.debug("Detected SHA-256 method.")
-                method = "sha256"
-            key = ''.join(random.choices(string.digits, k = 56))
-            rb = self._hex_string_to_int_string(hmac.new(key=key.encode(), digestmod=method).hexdigest())
-            self._logger.debug("Generated Rb: %s", rb)
-            self._logger.debug("Accepting challenge.")
-            self._stream_writer.write("*#*1##".encode())
-            await self._stream_writer.drain()
-            raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-            resulting_message = OWNSignaling(raw_response.decode())
-            if resulting_message.is_nonce():
-                ra = resulting_message.nonce
-                self._logger.debug("Received Ra: %s", ra)
-                if self._gateway.password is None:
+            if self._gateway.password is None:
                     error_message = "password_required"
-                    self._logger.warning("Connection requires a password but none was provided, trying default.")
-                    default_password_used = True
-                    hashedPass = f"*#{rb}*{self._encode_hmac_password(method=method, password=default_password, nonce_a=ra, nonce_b=rb)}##"
-                else:
+                    self._logger.warning("Connection requires a password but none was provided.")
+                    self._stream_writer.write("*#*0##".encode())
+                    await self._stream_writer.drain()
+            else:
+                if resulting_message.is_SHA_1():
+                    self._logger.debug("Detected SHA-1 method.")
+                    method = "sha1"
+                elif resulting_message.is_SHA_256():
+                    self._logger.debug("Detected SHA-256 method.")
+                    method = "sha256"
+                self._logger.debug("Accepting challenge, initiating handshake.")
+                self._stream_writer.write("*#*1##".encode())
+                await self._stream_writer.drain()
+                raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                resulting_message = OWNSignaling(raw_response.decode())
+                if resulting_message.is_nonce():
+                    ra = resulting_message.nonce
+                    self._logger.debug("Received Ra.")
+                    key = ''.join(random.choices(string.digits, k = 56))
+                    rb = self._hex_string_to_int_string(hmac.new(key=key.encode(), digestmod=method).hexdigest())
+                    self._logger.debug("Generated Rb.")
                     hashedPass = f"*#{rb}*{self._encode_hmac_password(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb)}##"
-                self._logger.debug("Sending %s session password.", self._type)
-                self._stream_writer.write(hashedPass.encode())
-                await self._stream_writer.drain() 
-                try:
-                    raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-                    resulting_message = OWNSignaling(raw_response.decode())
-                    if resulting_message.is_nonce():
-                        self._logger.debug("Received HMAC response.")
-                        hmac_response = resulting_message.nonce
-                        if hmac_response == self._decode_hmac_response(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb):
-                            self._stream_writer.write("*#*1##".encode())
-                            await self._stream_writer.drain()
-                        else:
-                            self._stream_writer.write("*#*0##".encode())
-                            await self._stream_writer.drain()
-                            error = True
-                            error_message = "negociation_error"
-                            self._logger.error("Error while opening %s session: HMAC authentication failed.", self._type)
-                except asyncio.IncompleteReadError as er:
-                    error = True
-                    if error_message != "password_required":
+                    self._logger.debug("Sending %s session password.", self._type)
+                    self._stream_writer.write(hashedPass.encode())
+                    await self._stream_writer.drain() 
+                    try:
+                        raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                        resulting_message = OWNSignaling(raw_response.decode())
+                        if resulting_message.is_nonce():
+                            self._logger.debug("Received HMAC response.")
+                            hmac_response = resulting_message.nonce
+                            if hmac_response == self._decode_hmac_response(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb):
+                                self._logger.debug("Server identity confirmed.")
+                                self._stream_writer.write("*#*1##".encode())
+                                await self._stream_writer.drain()
+                            else:
+                                self._logger.error("Server identity could not be confirmed.")
+                                self._stream_writer.write("*#*0##".encode())
+                                await self._stream_writer.drain()
+                                error = True
+                                error_message = "negociation_error"
+                                self._logger.error("Error while opening %s session: HMAC authentication failed.", self._type)
+                    except asyncio.IncompleteReadError:
+                        error = True
                         error_message = "password_error"
-                    self._logger.error("Password error while opening %s session.", self._type)
+                        self._logger.error("Password error while opening %s session.", self._type)
         elif resulting_message.is_nonce():
             self._logger.debug("Received nonce: %s", resulting_message)
             if self._gateway.password is None:

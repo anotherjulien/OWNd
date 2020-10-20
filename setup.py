@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="OWNd",
-    version="0.7.1",
+    version="0.7.2",
     author="anotherjulien",
     author_email="yetanotherjulien@gmail.com",
     description="Python interface for the OpenWebNet protocol",
