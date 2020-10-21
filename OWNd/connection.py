@@ -6,6 +6,7 @@ import hashlib
 import string 
 import random
 import logging
+import traceback
 from urllib.parse import urlparse
 
 from .discovery import find_gateways, get_gateway, get_port
@@ -393,14 +394,16 @@ class OWNEventSession(OWNSession):
         except asyncio.IncompleteReadError:
             self._logger.warning("Incomplete read on the event bus: %s.", data.decode())
             return None
-        except AttributeError:
+        except AttributeError as ar:
             self._logger.error("Received data could not be parsed into a message: %s", data.decode())
+            traceback.print_tb(ar.__traceback__)
             return None
         except ConnectionError as e:
             self._logger.error("Connection error: %s", e)
             return None
         except Exception as e:
             self._logger.error("Error: \"%s\" while parsing %s", e, data)
+            traceback.print_tb(e.__traceback__)
             return None
 
     async def close(self):

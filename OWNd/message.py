@@ -393,8 +393,10 @@ class OWNHeatingEvent(OWNEvent):
         if self._zone > 99:
             self._sensor = int(str(self._zone)[:1])
             self._zone = int(str(self._zone)[1:])
+        self._actuator = None
         
         self._mode = None
+        self._mode_name = None
         self._set_temperature = None
         self._local_offset = None
         self._local_set_temperature = None
@@ -415,17 +417,43 @@ class OWNHeatingEvent(OWNEvent):
 
         if self._what is not None:
             self._mode = int(self._what)
+            if self._mode in [103,203,303,102,202,302]:
+                self._mode_name = CLIMATE_MODE_OFF
+                self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
+            elif self._mode in [0,210,211,215] or (self._mode >= 2101 and self._mode <= 2103) or (self._mode >= 2201 and self._mode <= 2216):
+                self._mode_name = CLIMATE_MODE_COOL
+                self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
+            elif self._mode in [1,110,111,115] or (self._mode >= 1101 and self._mode <= 1103) or (self._mode >= 1201 and self._mode <= 1216):
+                self._mode_name = CLIMATE_MODE_HEAT
+                self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
+            elif self._mode in [310,311,315] or (self._mode >= 23001 and self._mode <= 23255) or (self._mode >= 13001 and self._mode <= 13255):
+                self._mode_name = CLIMATE_MODE_AUTO
+                self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
+            elif self._mode == 20:
+                self._mode_name = None
+                self._human_readable_log = f"Zone {self._zone}'s remote control is disabled"
+            elif self._mode == 21:
+                self._mode_name = None
+                self._human_readable_log = f"Zone {self._zone}'s remote control is enabled"
+            else:
+                self._mode_name = None
+                self._human_readable_log = f"Zone {self._zone}'s mode is unknown"
+            if self._what_param and self._what_param[0] is not None:
+                self._set_temperature = float(f"{self._what_param[0][1:3]}.{self._what_param[0][-1]}")
+                self._human_readable_log += f" at {self._set_temperature}°C."
+            else:
+                self._human_readable_log += "."
 
         if self._dimension == 0:    #Temperature
             if self._sensor is None:
-                self._measured_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+                self._measured_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
                 self._human_readable_log = f"Zone {self._zone}'s main sensor is reporting a temperature of {self._measured_temperature}°C."
             else:
-                self._secondary_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+                self._secondary_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
                 self._human_readable_log = f"Zone {self._zone}'s secondary sensor {self._sensor} is reporting a temperature of {self._secondary_temperature}°C."
 
         elif self._dimension == 11: #Fan speed
-            _fan_mode = int(self._dimention_param[0])
+            _fan_mode = int(self._dimension_value[0])
             if _fan_mode < 4:
                 self._fan_on = True
                 self._is_active = True
@@ -439,26 +467,29 @@ class OWNHeatingEvent(OWNEvent):
                 self._is_active = False
                 self._human_readable_log = f"Zone {self._zone}'s fan is off."
 
-        elif self._dimension == 12: #Set temperature
-            self._local_set_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+        elif self._dimension == 12: #Local set temperature (set+offset)
+            self._local_set_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
+            self._human_readable_log = f"Zone {self._zone}'s local target temperature is set to {self._local_set_temperature}°C."
 
         elif self._dimension == 13: #Local offset
-            if (self._dimention_param[0] == "0" or self._dimention_param[0] == "00" or self._dimention_param[0] == "4" or self._dimention_param[0] == "5"):
+            if (self._dimension_value[0] == "0" or self._dimension_value[0] == "00" or self._dimension_value[0] == "4" or self._dimension_value[0] == "5"):
                 self._local_offset = 0
-            elif self._dimention_param[0].startswith('0'):
-                self._local_offset = int(f"+{self._dimention_param[0][1:]}")
+            elif self._dimension_value[0].startswith('0'):
+                self._local_offset = int(f"+{self._dimension_value[0][1:]}")
             else:
-                self._local_offset = int(f"-{self._dimention_param[0][1:]}")
+                self._local_offset = int(f"-{self._dimension_value[0][1:]}")
+            self._human_readable_log = f"Zone {self._zone}'s local offset is set to {self._local_offset}°C."
 
-        elif self._dimension == 14: #Local set temperature (set+offset)
-            self._set_temperature = float(f"{self._dimention_param[0][1:3]}.{self._dimention_param[0][-1]}")
+        elif self._dimension == 14: #Set temperature
+            self._set_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
+            self._human_readable_log = f"Zone {self._zone}'s target temperature is set to {self._set_temperature}°C."
 
         elif self._dimension == 19: #Valves status
-            self._is_cooling = self._dimention_param[0] in _valve_active_states
-            self._is_heating = self._dimention_param[1] in _valve_active_states
+            self._is_cooling = self._dimension_value[0] in _valve_active_states
+            self._is_heating = self._dimension_value[1] in _valve_active_states
             self._is_active = self._is_cooling | self._is_heating
             # Handle cooling valve status relative to fan speed/status
-            _cooling_value = int(self._dimention_param[0])
+            _cooling_value = int(self._dimension_value[0])
             if _cooling_value == 0:
                 self._human_readable_log = f"Zone {self._zone}'s cooling valve is off"
             elif _cooling_value == 1:
@@ -481,7 +512,7 @@ class OWNHeatingEvent(OWNEvent):
                     self._is_active = False
                     self._human_readable_log = f"Zone {self._zone}'s cooling fan is off"
             # Handle heating valve status relative to fan speed/status
-            _heating_value = int(self._dimention_param[0])
+            _heating_value = int(self._dimension_value[1])
             if _heating_value == 0:
                 self._human_readable_log += "; heating valve is off."
             elif _heating_value == 1:
@@ -505,18 +536,19 @@ class OWNHeatingEvent(OWNEvent):
                     self._human_readable_log += "; heating fan is off."
 
         elif self._dimension == 20: #Actuator status
-            self._is_active = self._dimention_param[0] in _actuator_active_states
-            _value = int(self._dimention_param[0])
+            self._is_active = self._dimension_value[0] in _actuator_active_states
+            self._actuator = self._where_param[0] if self._where_param[0] is not None else 1
+            _value = int(self._dimension_value[0])
             if _value == 0:
-                self._human_readable_log = f"Zone {self._zone}'s actuator is off."
+                self._human_readable_log = f"Zone {self._zone}'s actuator {self._actuator} is off."
             elif _value == 1:
-                self._human_readable_log = f"Zone {self._zone}'s actuator is on."
+                self._human_readable_log = f"Zone {self._zone}'s actuator {self._actuator} is on."
             elif _value == 2:
-                self._human_readable_log = f"Zone {self._zone}'s actuator is opened."
+                self._human_readable_log = f"Zone {self._zone}'s actuator {self._actuator} is opened."
             elif _value == 3:
-                self._human_readable_log = f"Zone {self._zone}'s actuator is closed."
+                self._human_readable_log = f"Zone {self._zone}'s actuator {self._actuator} is closed."
             elif _value == 4:
-                self._human_readable_log = f"Zone {self._zone}'s actuator is stopped."
+                self._human_readable_log = f"Zone {self._zone}'s actuator {self._actuator} is stopped."
             elif _value > 4:
                 _fan_mode = _value - 5
                 if _fan_mode > 0:
@@ -541,16 +573,7 @@ class OWNHeatingEvent(OWNEvent):
 
     @property
     def mode(self) -> str:
-        if self._mode in [103,203,303,102,202,302]:
-            return CLIMATE_MODE_OFF
-        elif self._mode in [0,210,211,215] or (self._mode >= 2101 and self._mode <= 2103) or (self._mode >= 2201 and self._mode <= 2216):
-            return CLIMATE_MODE_COOL
-        elif self._mode in [1,110,111,115] or (self._mode >= 1101 and self._mode <= 1103) or (self._mode >= 1201 and self._mode <= 1216):
-            return CLIMATE_MODE_HEAT
-        elif self._mode in [310,311,315] or (self._mode >= 23001 and self._mode <= 23255) or (self._mode >= 13001 and self._mode <= 13255):
-            return CLIMATE_MODE_AUTO
-        else:
-            return None
+        return self._mode_name
 
     def is_activity(self) -> bool:
         return self._is_active is not None
