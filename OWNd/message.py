@@ -11,6 +11,14 @@ MESSAGE_TYPE_DAILY_CONSUMPTION = "daily_consumption"
 MESSAGE_TYPE_MONTHLY_CONSUMPTION = "monthly_consumption"
 MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION = "current_day_partial_consumption"
 MESSAGE_TYPE_CURRENT_MONTH_CONSUMPTION = "current_month_partial_consumption"
+MESSAGE_TYPE_MAIN_TEMPERATURE = "main_temperature"
+MESSAGE_TYPE_SECONDARY_TEMPERATURE = "secondary_temperature"
+MESSAGE_TYPE_TARGET_TEMPERATURE = "target_temperature"
+MESSAGE_TYPE_LOCAL_OFFSET = "local_offset"
+MESSAGE_TYPE_LOCAL_TARGET_TEMPERATURE = "local_targer_temperature"
+MESSAGE_TYPE_MODE = "hvac_mode"
+MESSAGE_TYPE_MODE_TARGET = "hvac_mode_target"
+MESSAGE_TYPE_ACTION = "hvac_action"
 
 CLIMATE_MODE_OFF = "off"
 CLIMATE_MODE_HEAT = "heat"
@@ -388,6 +396,8 @@ class OWNHeatingEvent(OWNEvent):
     def __init__(self, data):
         super().__init__(data)
 
+        self._type = None
+
         self._zone = int(self._where[1:]) if self._where.startswith('#') else int(self._where)
         self._sensor = None
         if self._zone > 99:
@@ -418,15 +428,19 @@ class OWNHeatingEvent(OWNEvent):
         if self._what is not None:
             self._mode = int(self._what)
             if self._mode in [103,203,303,102,202,302]:
+                self._type = MESSAGE_TYPE_MODE
                 self._mode_name = CLIMATE_MODE_OFF
                 self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
             elif self._mode in [0,210,211,215] or (self._mode >= 2101 and self._mode <= 2103) or (self._mode >= 2201 and self._mode <= 2216):
+                self._type = MESSAGE_TYPE_MODE
                 self._mode_name = CLIMATE_MODE_COOL
                 self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
             elif self._mode in [1,110,111,115] or (self._mode >= 1101 and self._mode <= 1103) or (self._mode >= 1201 and self._mode <= 1216):
+                self._type = MESSAGE_TYPE_MODE
                 self._mode_name = CLIMATE_MODE_HEAT
                 self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
             elif self._mode in [310,311,315] or (self._mode >= 23001 and self._mode <= 23255) or (self._mode >= 13001 and self._mode <= 13255):
+                self._type = MESSAGE_TYPE_MODE
                 self._mode_name = CLIMATE_MODE_AUTO
                 self._human_readable_log = f"Zone {self._zone}'s mode is set to '{self._mode_name}'"
             elif self._mode == 20:
@@ -439,6 +453,7 @@ class OWNHeatingEvent(OWNEvent):
                 self._mode_name = None
                 self._human_readable_log = f"Zone {self._zone}'s mode is unknown"
             if self._what_param and self._what_param[0] is not None:
+                self._type = MESSAGE_TYPE_MODE_TARGET
                 self._set_temperature = float(f"{self._what_param[0][1:3]}.{self._what_param[0][-1]}")
                 self._human_readable_log += f" at {self._set_temperature}°C."
             else:
@@ -446,9 +461,11 @@ class OWNHeatingEvent(OWNEvent):
 
         if self._dimension == 0:    #Temperature
             if self._sensor is None:
+                self._type = MESSAGE_TYPE_MAIN_TEMPERATURE
                 self._measured_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
                 self._human_readable_log = f"Zone {self._zone}'s main sensor is reporting a temperature of {self._measured_temperature}°C."
             else:
+                self._type = MESSAGE_TYPE_SECONDARY_TEMPERATURE
                 self._secondary_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
                 self._human_readable_log = f"Zone {self._zone}'s secondary sensor {self._sensor} is reporting a temperature of {self._secondary_temperature}°C."
 
@@ -468,10 +485,12 @@ class OWNHeatingEvent(OWNEvent):
                 self._human_readable_log = f"Zone {self._zone}'s fan is off."
 
         elif self._dimension == 12: #Local set temperature (set+offset)
+            self._type = MESSAGE_TYPE_LOCAL_TARGET_TEMPERATURE
             self._local_set_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
             self._human_readable_log = f"Zone {self._zone}'s local target temperature is set to {self._local_set_temperature}°C."
 
         elif self._dimension == 13: #Local offset
+            self._type = MESSAGE_TYPE_LOCAL_OFFSET
             if (self._dimension_value[0] == "0" or self._dimension_value[0] == "00" or self._dimension_value[0] == "4" or self._dimension_value[0] == "5"):
                 self._local_offset = 0
             elif self._dimension_value[0].startswith('0'):
@@ -481,10 +500,12 @@ class OWNHeatingEvent(OWNEvent):
             self._human_readable_log = f"Zone {self._zone}'s local offset is set to {self._local_offset}°C."
 
         elif self._dimension == 14: #Set temperature
+            self._type = MESSAGE_TYPE_TARGET_TEMPERATURE
             self._set_temperature = float(f"{self._dimension_value[0][1:3]}.{self._dimension_value[0][-1]}")
             self._human_readable_log = f"Zone {self._zone}'s target temperature is set to {self._set_temperature}°C."
 
         elif self._dimension == 19: #Valves status
+            self._type = MESSAGE_TYPE_ACTION
             self._is_cooling = self._dimension_value[0] in _valve_active_states
             self._is_heating = self._dimension_value[1] in _valve_active_states
             self._is_active = self._is_cooling | self._is_heating
@@ -536,6 +557,7 @@ class OWNHeatingEvent(OWNEvent):
                     self._human_readable_log += "; heating fan is off."
 
         elif self._dimension == 20: #Actuator status
+            self._type = MESSAGE_TYPE_ACTION
             self._is_active = self._dimension_value[0] in _actuator_active_states
             self._actuator = self._where_param[0] if self._where_param[0] is not None else 1
             _value = int(self._dimension_value[0])
@@ -565,18 +587,21 @@ class OWNHeatingEvent(OWNEvent):
                     self._human_readable_log = f"Zone {self._zone}'s fan is off."
 
     @property
+    def unique_id(self) -> str:
+        """ The ID of the subject of this message """
+        return f"{self._who}-{self._zone}"
+
+    @property
+    def message_type(self):
+        return self._type
+
+    @property
     def zone(self) -> int:
         return self._zone
-
-    def is_mode(self) -> bool:
-        return self._mode is not None
 
     @property
     def mode(self) -> str:
         return self._mode_name
-
-    def is_activity(self) -> bool:
-        return self._is_active is not None
 
     def is_active(self) -> bool:
         return self._is_active
@@ -586,37 +611,22 @@ class OWNHeatingEvent(OWNEvent):
 
     def is_cooling(self) -> bool:
         return self._is_cooling
-    
-    def is_main_temperature_measurement(self) -> bool:
-        return self._measured_temperature is not None
 
     @property
     def main_temperature(self) -> float:
         return self._measured_temperature
 
-    def is_secondary_temperature_measurement(self) -> bool:
-        return self._sensor is not None
-
     @property
     def secondary_temperature(self):
         return [self._sensor, self._secondary_temperature]
-
-    def is_set_temperature(self) -> bool:
-        return self._set_temperature is not None
     
     @property
     def set_temperature(self) -> float:
         return self._set_temperature
-
-    def is_local_offset(self) -> bool:
-        return self._local_offset is not None
     
     @property
     def local_offset(self) -> int:
         return self._local_offset
-
-    def is_local_set_temperature(self) -> bool:
-        return self._local_set_temperature is not None
     
     @property
     def local_set_temperature(self) -> float:
@@ -1288,7 +1298,7 @@ class OWNHeatingCommand(OWNCommand):
 
     @classmethod
     def turn_off(cls, where):
-        return cls.set_mode(cls, where=where, mode=CLIMATE_MODE_OFF)
+        return cls.set_mode(where=where, mode=CLIMATE_MODE_OFF)
 
     @classmethod
     def set_temperature(cls, where, temperature: float, mode: str):
