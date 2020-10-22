@@ -1280,9 +1280,14 @@ class OWNHeatingCommand(OWNCommand):
         return message
 
     @classmethod
-    def set_mode(cls, where, mode: str):
+    def set_mode(cls, where, mode: str, standalone=False):
         zone = int(where[1:]) if where.startswith('#') else int(where)
         zone_name = f"zone {zone}" if zone > 0 else "general"
+
+        if standalone:
+            zone = f"#{zone}" if zone == 0 else str(zone)
+        else:
+            zone = f"#{zone}"
 
         mode_name = mode
         if mode == CLIMATE_MODE_OFF:
@@ -1292,18 +1297,23 @@ class OWNHeatingCommand(OWNCommand):
         else:
             return None
 
-        message = cls(f"*4*{mode}*#{zone}##")
+        message = cls(f"*4*{mode}*{zone}##")
         message._human_readable_log = f"Setting {zone_name} mode to '{mode_name}'."
         return message
 
     @classmethod
-    def turn_off(cls, where):
-        return cls.set_mode(where=where, mode=CLIMATE_MODE_OFF)
+    def turn_off(cls, where, standalone=False):
+        return cls.set_mode(where=where, mode=CLIMATE_MODE_OFF, standalone=standalone)
 
     @classmethod
-    def set_temperature(cls, where, temperature: float, mode: str):
+    def set_temperature(cls, where, temperature: float, mode: str, standalone=False):
         zone = int(where[1:]) if where.startswith('#') else int(where)
         zone_name = f"zone {zone}" if zone > 0 else "general"
+
+        if standalone:
+            zone = f"#{zone}" if zone == 0 else str(zone)
+        else:
+            zone = f"#{zone}"
 
         temperature = round(temperature * 2) / 2
         if temperature < 5.0:
@@ -1321,7 +1331,7 @@ class OWNHeatingCommand(OWNCommand):
         elif mode == CLIMATE_MODE_AUTO:
             mode = 3
 
-        message = cls(f"*#4*#{zone}*#14*{temperature:04d}*{mode}##")
+        message = cls(f"*#4*{zone}*#14*{temperature:04d}*{mode}##")
         message._human_readable_log = f"Setting {zone_name} to {temperature_print}°C in mode '{mode_name}'."
         return message
 
