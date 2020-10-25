@@ -230,14 +230,14 @@ class OWNMessage():
 
     @property
     def group(self) ->  int:
-        if self.is_group():
+        if self.is_group:
             return int(self._where[1:])
         else:
             return None
 
     @property
     def area(self) -> int:
-        if self.is_area():
+        if self.is_area:
             return 10 if self._where == '100' else int(self._where)
         else:
             return None
