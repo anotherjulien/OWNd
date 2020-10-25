@@ -27,7 +27,7 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
         message = await connection.get_next()
         if message:
             logger.debug("Received: %s", message)
-            if message.is_event():
+            if message.is_event:
                 logger.info(message.human_readable_log)
 
 if __name__ == "__main__":

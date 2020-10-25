@@ -391,19 +391,21 @@ class OWNEventSession(OWNSession):
         try:
             data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             return OWNMessage.parse(data.decode())
-        except asyncio.IncompleteReadError:
+        except asyncio.IncompleteReadError as ire:
             self._logger.warning("Incomplete read on the event bus: %s.", data.decode())
+            #traceback.print_tb(ire.__traceback__)
             return None
         except AttributeError as ar:
             self._logger.error("Received data could not be parsed into a message: %s", data.decode())
-            traceback.print_tb(ar.__traceback__)
+            #traceback.print_tb(ar.__traceback__)
             return None
         except ConnectionError as e:
             self._logger.error("Connection error: %s", e)
+            #traceback.print_tb(e.__traceback__)
             return None
         except Exception as e:
             self._logger.error("Error: \"%s\" while parsing %s", e, data)
-            traceback.print_tb(e.__traceback__)
+            #traceback.print_tb(e.__traceback__)
             return None
 
     async def close(self):

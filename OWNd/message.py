@@ -47,8 +47,10 @@ class OWNMessage():
         self._family = ""
         self._who = ""
         self._where = ""
+        self._is_valid_message = False
 
         if self._STATUS.match(self._raw):
+            self._is_valid_message = True
             self._match = self._STATUS.match(self._raw)
             self._family = 'EVENT'
             self._type = 'STATUS'
@@ -66,6 +68,7 @@ class OWNMessage():
             self._dimension_value = None
 
         elif self._STATUS_REQUEST.match(self._raw):
+            self._is_valid_message = True
             self._match = self._STATUS_REQUEST.match(self._raw)
             self._family = 'REQUEST'
             self._type = 'STATUS_REQUEST'
@@ -80,6 +83,7 @@ class OWNMessage():
             self._dimension_value = None
         
         elif self._DIMENSION_REQUEST.match(self._raw):
+            self._is_valid_message = True
             self._match = self._DIMENSION_REQUEST.match(self._raw)
             self._family = 'REQUEST'
             self._type = 'DIMENSION_REQUEST'
@@ -94,6 +98,7 @@ class OWNMessage():
             self._dimension_value = None
 
         elif self._DIMENSION_REQUEST_REPLY.match(self._raw):
+            self._is_valid_message = True
             self._match = self._DIMENSION_REQUEST_REPLY.match(self._raw)
             self._family = 'EVENT'
             self._type = 'DIMENSION_REQUEST_REPLY'
@@ -110,6 +115,7 @@ class OWNMessage():
             del self._dimension_value[0]
 
         elif self._DIMENSION_WRITING.match(self._raw):
+            self._is_valid_message = True
             self._match = self._DIMENSION_WRITING.match(self._raw)
             self._family = 'COMMAND'
             self._type = 'DIMENSION_WRITING'
@@ -144,22 +150,35 @@ class OWNMessage():
         else:
             return None
 
+    @property
     def is_event(self) -> bool:
         return self._family == 'EVENT'
 
+    @property
     def is_command(self) -> bool:
         return self._family == 'COMMAND'
 
+    @property
     def is_request(self) -> bool:
         return self._family == 'REQUEST'
 
+    @property
     def is_translation(self) -> bool:
         return self._family == 'COMMAND_TRANSLATION'
+
+    @property
+    def is_valid(self) -> bool:
+        return self._is_valid_message
 
     @property
     def who(self) -> str:
         """ The 'who' ID of the subject of this message """
         return self._who
+
+    @property
+    def numeric_who(self) -> int:
+        """ Only the numeric part of 'who' ID of the subject of this message """
+        return int(self._who[1:]) if self._who.startswith('#') else int(self._who)
 
     @property
     def where(self) -> str:
@@ -180,6 +199,53 @@ class OWNMessage():
     def human_readable_log(self) -> str:
         """ A human readable log of the event """
         return self._human_readable_log
+
+    @property
+    def is_general(self) -> bool:
+        if self.numeric_who == 1 or self.numeric_who == 2:
+            if self._where == '0':
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    @property
+    def is_group(self) -> bool:
+        if self.numeric_who == 1 or self.numeric_who == 2:
+            if self._where.startswith('#'):
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    @property
+    def is_area(self) -> bool:
+        if self.numeric_who == 1 or self.numeric_who == 2:
+            try:
+                if (self._where == '00' or self._where == '100' or (len(self._where) == 1 and int(self._where) > 0 and int(self._where) < 10)):
+                    return True
+                else:
+                    return False
+            except ValueError:
+                return False
+        else:
+            return False
+
+    @property
+    def group(self) ->  int:
+        if self.is_group():
+            return int(self._where[1:])
+        else:
+            return None
+
+    @property
+    def area(self) -> int:
+        if self.is_area():
+            return 10 if self._where == '100' else int(self._where)
+        else:
+            return None
 
     def __repr__(self) -> str:
         return self._raw
@@ -1181,7 +1247,7 @@ class OWNCommand(OWNMessage):
             elif _who == 2:
                 return OWNAutomationCommand(data)
             elif _who == 4:
-                return cls(data)
+                return OWNHeatingCommand(data)
             elif _who == 5:
                 return cls(data)
             elif _who == 9:
