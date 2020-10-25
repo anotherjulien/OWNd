@@ -171,14 +171,9 @@ class OWNMessage():
         return self._is_valid_message
 
     @property
-    def who(self) -> str:
+    def who(self) -> int:
         """ The 'who' ID of the subject of this message """
         return self._who
-
-    @property
-    def numeric_who(self) -> int:
-        """ Only the numeric part of 'who' ID of the subject of this message """
-        return int(self._who[1:]) if self._who.startswith('#') else int(self._who)
 
     @property
     def where(self) -> str:
@@ -202,7 +197,7 @@ class OWNMessage():
 
     @property
     def is_general(self) -> bool:
-        if self.numeric_who == 1 or self.numeric_who == 2:
+        if self.who == 1 or self.who == 2:
             if self._where == '0':
                 return True
             else:
@@ -212,7 +207,7 @@ class OWNMessage():
 
     @property
     def is_group(self) -> bool:
-        if self.numeric_who == 1 or self.numeric_who == 2:
+        if self.who == 1 or self.who == 2:
             if self._where.startswith('#'):
                 return True
             else:
@@ -222,7 +217,7 @@ class OWNMessage():
 
     @property
     def is_area(self) -> bool:
-        if self.numeric_who == 1 or self.numeric_who == 2:
+        if self.who == 1 or self.who == 2:
             try:
                 if (self._where == '00' or self._where == '100' or (len(self._where) == 1 and int(self._where) > 0 and int(self._where) < 10)):
                     return True
