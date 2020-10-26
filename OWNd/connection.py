@@ -392,8 +392,9 @@ class OWNEventSession(OWNSession):
             data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
             return OWNMessage.parse(data.decode())
         except asyncio.IncompleteReadError as ire:
-            self._logger.exception("Incomplete read on the event bus:")
+            self._logger.warning("Connection interrupted, reconnecting...")
             #traceback.print_tb(ire.__traceback__)
+            await self.connect()
             return None
         except AttributeError as ar:
             self._logger.exception("Received data could not be parsed into a message:")
