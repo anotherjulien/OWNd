@@ -28,7 +28,7 @@ CLIMATE_MODE_AUTO = "auto"
 class OWNMessage():
 
     _ACK = re.compile(r"^\*#\*1##$") #  *#*1##
-    _NACK = re.compile(r"^\*#\*0##$") #  *#*1##
+    _NACK = re.compile(r"^\*#\*0##$") #  *#*0##
     _COMMAND_SESSION = re.compile(r"^\*99\*0##$") #  *99*0##
     _EVENT_SESSION = re.compile(r"^\*99\*1##$") #  *99*1##
     _NONCE = re.compile(r"^\*#(\d+)##$") #  *#123456789##
