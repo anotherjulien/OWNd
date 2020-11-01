@@ -163,8 +163,23 @@ class OWNSession():
         return await connection.test_connection()
 
     async def test_connection(self) -> dict:
+    
+        retry_count = 0
+        retry_timer = 1
 
-        self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+        while True:
+            try:
+                if retry_count > 2:
+                    self._logger.error("Test session connection still refused after 3 attempts.")
+                    return None
+                self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+                break
+            except ConnectionRefusedError:
+                self._logger.warning("Test session connection refused, retrying in %ss.", retry_timer)
+                await asyncio.sleep(retry_timer)
+                retry_count += 1
+                retry_timer *= 2
+        
         result = await self._negotiate()
         await self.close()
 
@@ -382,7 +397,23 @@ class OWNEventSession(OWNSession):
 
     async def connect(self):
         self._logger.info("Opening event session.")
-        self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+        
+        retry_count = 0
+        retry_timer = 1
+
+        while True:
+            try:
+                if retry_count > 4:
+                    self._logger.error("Event session connection still refused after 5 attempts.")
+                    return None
+                self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+                break
+            except ConnectionRefusedError:
+                self._logger.warning("Event session connection refused, retrying in %ss.", retry_timer)
+                await asyncio.sleep(retry_timer)
+                retry_count += 1
+                retry_timer *= 2
+
         await self._negotiate()
     
     async def get_next(self):
@@ -431,7 +462,22 @@ class OWNCommandSession(OWNSession):
 
         self._logger.info("Opening command session.")
 
-        self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+        retry_count = 0
+        retry_timer = 1
+
+        while True:
+            try:
+                if retry_count > 2:
+                    self._logger.error("Command session connection still refused after 3 attempts.")
+                    return None
+                self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+                break
+            except ConnectionRefusedError:
+                self._logger.warning("Command session connection refused, retrying in %ss.", retry_timer)
+                await asyncio.sleep(retry_timer)
+                retry_count += 1
+                retry_timer *= 2
+
         message_string = str(message).encode()
         negotiation_result = await self._negotiate()
         
