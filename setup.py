@@ -7,6 +7,7 @@ setuptools.setup(
     name="OWNd",
     version="0.7.11",
     author="anotherjulien",
+    url="https://github.com/anotherjulien/OWNd",
     author_email="yetanotherjulien@gmail.com",
     description="Python interface for the OpenWebNet protocol",
     long_description=long_description,
