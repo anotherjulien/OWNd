@@ -1534,6 +1534,7 @@ class OWNSignaling(OWNMessage):
 
     def __init__(self, data):
         self._raw = data
+        self._type = 'UNKNOWN'
 
         if self._ACK.match(self._raw):
             self._match = self._ACK.match(self._raw)

@@ -298,6 +298,9 @@ class OWNSession():
         elif resulting_message.is_ACK():
             self._logger.debug("Reply: %s", resulting_message)
             self._logger.info("%s session established.", self._type.capitalize())
+        else:
+            error = True
+            error_message = "negotiation_failed"
 
         return {"Success": not error, "Message": error_message}
 
