@@ -463,23 +463,22 @@ class OWNCommandSession(OWNSession):
         self._logger.info("Opening command session.")
 
         retry_count = 0
-        retry_timer = 1
+        retry_timer = 0.5
 
         while True:
             try:
-                if retry_count > 2:
-                    self._logger.error("Command session connection still refused after 3 attempts.")
+                if retry_count > 3:
+                    self._logger.error("Command session connection still refused after 4 attempts.")
                     return None
                 self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+                message_string = str(message).encode()
+                negotiation_result = await self._negotiate()
                 break
-            except ConnectionRefusedError:
-                self._logger.warning("Command session connection refused, retrying in %ss.", retry_timer)
+            except (ConnectionRefusedError, asyncio.IncompleteReadError):
+                self._logger.warning("Command session connection refused or negotiation interrupted, retrying in %ss.", retry_timer)
                 await asyncio.sleep(retry_timer)
                 retry_count += 1
                 retry_timer *= 2
-
-        message_string = str(message).encode()
-        negotiation_result = await self._negotiate()
         
         if negotiation_result["Success"]:
             self._stream_writer.write(message_string)
