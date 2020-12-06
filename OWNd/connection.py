@@ -301,6 +301,7 @@ class OWNSession():
         else:
             error = True
             error_message = "negotiation_failed"
+            self._logger.info("Unexpected message during negotiation: %s", resulting_message)
 
         return {"Success": not error, "Message": error_message}
 
