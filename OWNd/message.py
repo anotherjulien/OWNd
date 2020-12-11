@@ -653,6 +653,8 @@ class OWNHeatingEvent(OWNEvent):
         """ The ID of the subject of this message """
         if self._zone == 0:
             return f"{self._who}-#0"
+        elif self._sensor is not None:
+            return f"{self._who}-{self._where}"
         else:
             return f"{self._who}-{self._zone}"
 
