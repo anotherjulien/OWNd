@@ -1,6 +1,9 @@
 # Visual studio code settings
 .vscode
 
+# macOS
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
