@@ -172,26 +172,31 @@ async def get_port(SCPD_location: str) -> int:
 
     host = urlparse(SCPD_location).netloc
     scheme = urlparse(SCPD_location).scheme
-    async with aiohttp.ClientSession() as session:
-        
-        service_ns = "urn:schemas-bticino-it:service:openserver:1"
-        service_action = "getopenserverPort"
-        service_control = "upnp/pwdControl"
-        soap_body = _get_soap_body(service_ns, service_action)
-        soap_action = f"{service_ns}#{service_action}"
-        headers = {
-            'SOAPAction': f'"{soap_action}"',
-            'Host': f"{host}",
-            'Content-Type': 'text/xml',
-            'Content-Length': str(len(soap_body)),
-        }
+    try:
+        async with aiohttp.ClientSession() as session:
+            
+            service_ns = "urn:schemas-bticino-it:service:openserver:1"
+            service_action = "getopenserverPort"
+            service_control = "upnp/pwdControl"
+            soap_body = _get_soap_body(service_ns, service_action)
+            soap_action = f"{service_ns}#{service_action}"
+            headers = {
+                'SOAPAction': f'"{soap_action}"',
+                'Host': f"{host}",
+                'Content-Type': 'text/xml',
+                'Content-Length': str(len(soap_body)),
+            }
 
-        ctrl_url = f"{scheme}://{host}/{service_control}"
-        resp = await session.post(ctrl_url, data=soap_body, headers=headers)
-        soap_response = xml.dom.minidom.parseString(await resp.text()).documentElement
-        await session.close()
+            ctrl_url = f"{scheme}://{host}/{service_control}"
+            resp = await session.post(ctrl_url, data=soap_body, headers=headers)
+            soap_response = xml.dom.minidom.parseString(await resp.text()).documentElement
+            await session.close()
 
-    return int(soap_response.getElementsByTagName("Port")[0].childNodes[0].data)
+        return int(soap_response.getElementsByTagName("Port")[0].childNodes[0].data)
+    except aiohttp.client_exceptions.ServerDisconnectedError:
+        return 20000
+    except aiohttp.client_exceptions.ClientOSError:
+        return 20000
 
 async def _get_scpd_details(SCPD_location: str) -> dict:
 
@@ -211,12 +216,7 @@ async def _get_scpd_details(SCPD_location: str) -> dict:
         discovery_info["serialNumber"] = scpd_xml.getElementsByTagName("serialNumber")[0].childNodes[0].data
         discovery_info["UDN"] = scpd_xml.getElementsByTagName("UDN")[0].childNodes[0].data
 
-        try:
-            discovery_info["port"] = await get_port(SCPD_location)
-        except aiohttp.client_exceptions.ServerDisconnectedError:
-            discovery_info["port"] = 20000
-        except aiohttp.client_exceptions.ClientOSError:
-            discovery_info["port"] = 20000
+        discovery_info["port"] = await get_port(SCPD_location)
 
         await session.close()
 

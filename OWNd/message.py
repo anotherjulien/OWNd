@@ -513,6 +513,7 @@ class OWNHeatingEvent(OWNEvent):
             else:
                 self._mode_name = None
                 self._human_readable_log = f"Zone {self._zone}'s mode is unknown"
+                
             if self._what_param and self._what_param[0] is not None:
                 self._type = MESSAGE_TYPE_MODE_TARGET
                 self._set_temperature = float(f"{self._what_param[0][1:3]}.{self._what_param[0][-1]}")
@@ -650,7 +651,12 @@ class OWNHeatingEvent(OWNEvent):
     @property
     def unique_id(self) -> str:
         """ The ID of the subject of this message """
-        return f"{self._who}-{self._zone}"
+        if self._zone == 0:
+            return f"{self._who}-#0"
+        elif self._sensor is not None:
+            return f"{self._who}-{self._where}"
+        else:
+            return f"{self._who}-{self._zone}"
 
     @property
     def message_type(self):
@@ -1534,6 +1540,9 @@ class OWNSignaling(OWNMessage):
 
     def __init__(self, data):
         self._raw = data
+        self._family = None
+        self._type = 'UNKNOWN'
+        self._human_readable_log = data
 
         if self._ACK.match(self._raw):
             self._match = self._ACK.match(self._raw)
