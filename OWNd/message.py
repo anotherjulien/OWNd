@@ -1347,6 +1347,12 @@ class OWNHeatingCommand(OWNCommand):
         return message
 
     @classmethod
+    def get_temperature(cls, where):
+        message = cls(f"*#4*{where}*0##")
+        message._human_readable_log = f"Requesting climate status update for {where}."
+        return message
+
+    @classmethod
     def set_mode(cls, where, mode: str, standalone=False):
         zone = int(where[1:]) if where.startswith('#') else int(where)
         zone_name = f"zone {zone}" if zone > 0 else "general"
