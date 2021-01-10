@@ -460,6 +460,8 @@ class OWNHeatingEvent(OWNEvent):
         self._type = None
 
         self._zone = int(self._where[1:]) if self._where.startswith('#') else int(self._where)
+        if self._zone == 0 and self._where_param is not None:
+            self._zone int(self._where_param[0])
         self._sensor = None
         if self._zone > 99:
             self._sensor = int(str(self._zone)[:1])
