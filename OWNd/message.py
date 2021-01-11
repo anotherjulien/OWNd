@@ -1356,7 +1356,7 @@ class OWNHeatingCommand(OWNCommand):
 
     @classmethod
     def set_mode(cls, where, mode: str, standalone=False):
-        zone = int(where[1:]) if where.startswith('#') else int(where)
+        zone = int(where.split("#")[-1]) if where.startswith('#') else int(where)
         zone_name = f"zone {zone}" if zone > 0 else "general"
 
         if standalone:
@@ -1382,7 +1382,7 @@ class OWNHeatingCommand(OWNCommand):
 
     @classmethod
     def set_temperature(cls, where, temperature: float, mode: str, standalone=False):
-        zone = int(where[1:]) if where.startswith('#') else int(where)
+        zone = int(where.split("#")[-1]) if where.startswith('#') else int(where)
         zone_name = f"zone {zone}" if zone > 0 else "general"
 
         if standalone:
