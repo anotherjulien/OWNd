@@ -3,7 +3,7 @@ import asyncio
 import logging
 import time
 
-from .connection import (OWNEventSession, OWNGateway)
+from .connection import (OWNEventSession, OWNGateway, OWNCommandSession)
 
 
 async def main(arguments: dict, connection: OWNEventSession) -> None:
@@ -22,6 +22,8 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
         connection.logger = logger
 
     await connection.connect()
+
+    #await OWNCommandSession.send_to_gateway(message="*1001*12*0##", gateway=gateway)
 
     while True:
         message = await connection.get_next()

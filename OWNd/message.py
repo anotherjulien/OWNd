@@ -288,6 +288,8 @@ class OWNEvent(OWNMessage):
                     return OWNCENPlusEvent(data)
                 elif _where.startswith('3'):
                     return OWNDryContactEvent(data)
+            elif _who == 1001:
+                return OWNAutomationDiagnosticEvent(data)
 
         return None
 
@@ -1229,6 +1231,11 @@ class OWNCENPlusEvent(OWNEvent):
     def human_readable_log(self):
         return self._human_readable_log
 
+class OWNAutomationDiagnosticEvent(OWNEvent):
+
+    def __init__(self, data):
+        super().__init__(data)
+
 class OWNCommand(OWNMessage):
     """ This class is a subclass of messages. All messages sent during a command session are commands.
     Dividing this in a subclass provides better clarity """
@@ -1269,6 +1276,8 @@ class OWNCommand(OWNMessage):
                     return cls(data)
                 elif _where.startswith('3'):
                     return OWNDryContactCommand(data)
+            elif _who == 1001:
+                return OWNAutomationDiagnosticCommand(data)
 
         return None
 
@@ -1543,6 +1552,24 @@ class OWNDryContactCommand(OWNCommand):
         message._human_readable_log = f"Requesting dry contact {where} status."
         return message
 
+class OWNAutomationDiagnosticCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+    @classmethod
+    def get_device_list(cls):
+        message = cls(f"*1001*12*0##")
+        message._human_readable_log = f"Requesting automation device list."
+        return message
+
+    @classmethod
+    def get_device_configuration(cls, id: str):
+        int_id = int(id, 16)
+        message = cls(f"*1001*10#{int_id}*0##")
+        message._human_readable_log = f"Requesting automation device {id} configuration."
+        return message
+    
 class OWNSignaling(OWNMessage):
     """ This class is a subclass of messages. It is dedicated to signaling messages such as ACK or Authentication negotiation """
 
