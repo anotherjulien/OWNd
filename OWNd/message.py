@@ -1365,13 +1365,18 @@ class OWNHeatingCommand(OWNCommand):
 
     @classmethod
     def set_mode(cls, where, mode: str, standalone=False):
-        zone = int(where.split("#")[-1]) if where.startswith('#') else int(where)
-        zone_name = f"zone {zone}" if zone > 0 else "general"
-
-        if standalone:
-            zone = f"#{zone}" if zone == 0 else str(zone)
+        central_local = re.compile('^#0#\d+$')
+        if central_local.match(str(where)):
+            zone = where
+            zone_name = f"zone {int(where.split('#')[-1])}"
         else:
-            zone = f"#{zone}"
+            zone = int(where.split("#")[-1]) if where.startswith('#') else int(where)
+            zone_name = f"zone {zone}" if zone > 0 else "general"
+
+            if standalone:
+                zone = f"#{zone}" if zone == 0 else str(zone)
+            else:
+                zone = f"#{zone}"
 
         mode_name = mode
         if mode == CLIMATE_MODE_OFF:
@@ -1391,13 +1396,18 @@ class OWNHeatingCommand(OWNCommand):
 
     @classmethod
     def set_temperature(cls, where, temperature: float, mode: str, standalone=False):
-        zone = int(where.split("#")[-1]) if where.startswith('#') else int(where)
-        zone_name = f"zone {zone}" if zone > 0 else "general"
-
-        if standalone:
-            zone = f"#{zone}" if zone == 0 else str(zone)
+        central_local = re.compile('^#0#\d+$')
+        if central_local.match(str(where)):
+            zone = where
+            zone_name = f"zone {int(where.split('#')[-1])}"
         else:
-            zone = f"#{zone}"
+            zone = int(where.split("#")[-1]) if where.startswith('#') else int(where)
+            zone_name = f"zone {zone}" if zone > 0 else "general"
+
+            if standalone:
+                zone = f"#{zone}" if zone == 0 else str(zone)
+            else:
+                zone = f"#{zone}"
 
         temperature = round(temperature * 2) / 2
         if temperature < 5.0:
