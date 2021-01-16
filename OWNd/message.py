@@ -1036,7 +1036,7 @@ class OWNEnergyEvent(OWNEvent):
     def __init__(self, data):
         super().__init__(data)
 
-        if  not self._where.startswith('5'):
+        if  not self._where.startswith('5') and not self._where.startswith('7'):
             return None
         
         self._type = None
@@ -1496,6 +1496,7 @@ class OWNEnergyCommand(OWNCommand):
 
     @classmethod
     def start_sending_instant_power(cls, where, duration: int = 65):
+        where = f"{where}#0" if str(where).startswith('7') else str(where)
         duration = 255 if duration > 255 else duration
         message = cls(f"*#18*{where}*#1200#1*{duration}##")
         message._human_readable_log = f"Requesting instant power draw update from sensor {where} for {duration} minutes."
@@ -1503,6 +1504,7 @@ class OWNEnergyCommand(OWNCommand):
 
     @classmethod
     def get_hourly_consumption(cls, where, date: datetime.date):
+        where = f"{where}#0" if str(where).startswith('7') else str(where)
         date_month = date.month
         date_day = date.day
         today = datetime.date.today()
@@ -1515,12 +1517,14 @@ class OWNEnergyCommand(OWNCommand):
 
     @classmethod
     def get_partial_daily_consumption(cls, where):
+        where = f"{where}#0" if str(where).startswith('7') else str(where)
         message = cls(f"*#18*{where}*54##")
         message._human_readable_log = f"Requesting today's partial power consumption from sensor {where}."
         return message
 
     @classmethod
     def get_daily_consumption(cls, where, year, month):
+        where = f"{where}#0" if str(where).startswith('7') else str(where)
         today = datetime.date.today()
         one_year_ago = today - relativedelta(years=1)
         two_year_ago = today - relativedelta(years=2)
@@ -1538,6 +1542,7 @@ class OWNEnergyCommand(OWNCommand):
 
     @classmethod
     def get_monthly_consumption(cls, where, year, month):
+        where = f"{where}#0" if str(where).startswith('7') else str(where)
         message = cls(f"*#18*{where}*52#{str(year)[2:]}#{month}##")
         message._human_readable_log = f"Requesting monthly power consumption for {year}-{month} from sensor {where}."
         return message
