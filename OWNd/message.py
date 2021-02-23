@@ -1253,16 +1253,26 @@ class OWNCommand(OWNMessage):
                 return OWNHeatingCommand(data)
             elif _who == 5:
                 return cls(data)
+            elif _who == 7:
+                return cls(data)
             elif _who == 9:
                 return cls(data)
             elif _who == 13:
                 return OWNGatewayCommand(data)
+            elif _who == 14:
+                return cls(data)
             elif _who == 15:
+                return cls(data)
+            elif _who == 16:
                 return cls(data)
             elif _who == 17:
                 return cls(data)
             elif _who == 18:
                 return OWNEnergyCommand(data)
+            elif _who == 22:
+                return cls(data)
+            elif _who == 24:
+                return cls(data)
             elif _who == 25:
                 _where = re.match(r"^\*.+\*(?P<where>\d+)##$", data).group('where')
                 if _where.startswith('2'):
@@ -1420,6 +1430,30 @@ class OWNHeatingCommand(OWNCommand):
         message._human_readable_log = f"Setting {zone_name} to {temperature_print}°C in mode '{mode_name}'."
         return message
 
+class OWNAVCommand(OWNCommand):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+    @classmethod
+    def receive_video(cls, where):
+        camera_id = where
+        if int(where) < 100:
+            where = f"40{camera_id}"
+        elif int(where) >= 4000 and int(where) < 5000:
+            camera_id = where[2:]
+        else:
+            return None
+        
+        message = cls(f"*7*0*{where}##")
+        message._human_readable_log = f"Opening video stream for camera {camera_id}."
+        return message
+
+    @classmethod
+    def close_video(cls):
+        message = cls("*7*9**##")
+        message._human_readable_log = "Closing video stream."
+        return message
 class OWNGatewayCommand(OWNCommand):
 
     def __init__(self, data):
