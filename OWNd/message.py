@@ -1253,6 +1253,8 @@ class OWNCommand(OWNMessage):
                 return OWNHeatingCommand(data)
             elif _who == 5:
                 return cls(data)
+            elif _who == 6:
+                return cls(data)
             elif _who == 7:
                 return cls(data)
             elif _who == 9:
