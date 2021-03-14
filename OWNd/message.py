@@ -1249,11 +1249,13 @@ class OWNCommand(OWNMessage):
                 return OWNLightingCommand(data)
             elif _who == 2:
                 return OWNAutomationCommand(data)
+            elif _who == 3: #Charges / Loads ?
+                return cls(data)
             elif _who == 4:
                 return OWNHeatingCommand(data)
             elif _who == 5:
                 return cls(data)
-            elif _who == 6:
+            elif _who == 6: #VDES
                 return cls(data)
             elif _who == 7:
                 return cls(data)
