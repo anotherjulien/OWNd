@@ -272,29 +272,24 @@ class OWNSession():
                         self._logger.error("Password error while opening %s session.", self._type)
         elif resulting_message.is_nonce():
             self._logger.debug("Received nonce: %s", resulting_message)
-            if self._gateway.password is None:
-                error_message = "password_required"
-                self._logger.warning("Connection requires a password but none was provided, trying default.")
-                default_password_used = True
-                hashedPass = f"*#{self._get_own_password(default_password, resulting_message.nonce)}##"
-            else:
+            if self._gateway.password is not None:
                 hashedPass = f"*#{self._get_own_password(self._gateway.password, resulting_message.nonce)}##"
-            self._logger.debug("Sending %s session password.", self._type)
-            self._stream_writer.write(hashedPass.encode())
-            await self._stream_writer.drain()
-            raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-            resulting_message = OWNSignaling(raw_response.decode())
-            self._logger.debug("Reply: %s", resulting_message)
-            if resulting_message.is_NACK():
-                error = True
-                if error_message != "password_required":
+                self._logger.debug("Sending %s session password.", self._type)
+                self._stream_writer.write(hashedPass.encode())
+                await self._stream_writer.drain()
+                raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                resulting_message = OWNSignaling(raw_response.decode())
+                self._logger.debug("Reply: %s", resulting_message)
+                if resulting_message.is_NACK():
+                    error = True
                     error_message = "password_error"
-                self._logger.error("Password error while opening %s session.", self._type)
-            elif resulting_message.is_ACK():
-                if default_password_used:
-                    error_message = "default_password"
-                    self._gateway.password = default_password
-                self._logger.info("%s session established.", self._type.capitalize())
+                    self._logger.error("Password error while opening %s session.", self._type)
+                elif resulting_message.is_ACK():
+                    self._logger.info("%s session established.", self._type.capitalize())
+            else:
+                error = True
+                error_message = "password_error"
+                self._logger.error("Connection requires a password but none was provided while opening %s session.", self._type)
         elif resulting_message.is_ACK():
             self._logger.debug("Reply: %s", resulting_message)
             self._logger.info("%s session established.", self._type.capitalize())
