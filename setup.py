@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="OWNd",
-    version="0.7.23",
+    version="0.7.24",
     author="anotherjulien",
     url="https://github.com/anotherjulien/OWNd",
     author_email="yetanotherjulien@gmail.com",
