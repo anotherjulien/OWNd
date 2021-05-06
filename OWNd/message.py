@@ -12,6 +12,7 @@ MESSAGE_TYPE_MONTHLY_CONSUMPTION = "monthly_consumption"
 MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION = "current_day_partial_consumption"
 MESSAGE_TYPE_CURRENT_MONTH_CONSUMPTION = "current_month_partial_consumption"
 MESSAGE_TYPE_MAIN_TEMPERATURE = "main_temperature"
+MESSAGE_TYPE_MAIN_HUMIDITY = "main_humidity"
 MESSAGE_TYPE_SECONDARY_TEMPERATURE = "secondary_temperature"
 MESSAGE_TYPE_TARGET_TEMPERATURE = "target_temperature"
 MESSAGE_TYPE_LOCAL_OFFSET = "local_offset"
@@ -475,6 +476,7 @@ class OWNHeatingEvent(OWNEvent):
         self._local_set_temperature = None
         self._measured_temperature = None
         self._secondary_temperature = None
+        self._measured_humidity = None
 
         self._is_active = None
         self._is_heating = None
@@ -650,6 +652,11 @@ class OWNHeatingEvent(OWNEvent):
                     self._is_active = False
                     self._human_readable_log = f"Zone {self._zone}'s fan is off."
 
+        elif self._dimension == 60: #Humidity
+            self._type = MESSAGE_TYPE_MAIN_HUMIDITY
+            self._measured_humidity = float(self._dimension_value[0])
+            self._human_readable_log = f"Zone {self._zone}'s main sensor is reporting a humidity of {self._measured_humidity}%."
+
     @property
     def unique_id(self) -> str:
         """ The ID of the subject of this message """
@@ -684,6 +691,10 @@ class OWNHeatingEvent(OWNEvent):
     @property
     def main_temperature(self) -> float:
         return self._measured_temperature
+
+    @property
+    def main_humidity(self) -> float:
+        return self._measured_humidity
 
     @property
     def secondary_temperature(self):
