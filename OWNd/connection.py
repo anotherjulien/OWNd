@@ -250,9 +250,13 @@ class OWNSession():
                     self._stream_writer.write(hashedPass.encode())
                     await self._stream_writer.drain() 
                     try:
-                        raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                        raw_response = await asyncio.wait_for(self._stream_reader.readuntil(OWNSession.SEPARATOR), timeout=5)
                         resulting_message = OWNSignaling(raw_response.decode())
-                        if resulting_message.is_nonce():
+                        if resulting_message.is_NACK():
+                            error = True
+                            error_message = "password_error"
+                            self._logger.error("Password error while opening %s session.", self._type)
+                        elif resulting_message.is_nonce():
                             self._logger.debug("Received HMAC response.")
                             hmac_response = resulting_message.nonce
                             if hmac_response == self._decode_hmac_response(method=method, password=self._gateway.password, nonce_a=ra, nonce_b=rb):
@@ -270,6 +274,10 @@ class OWNSession():
                         error = True
                         error_message = "password_error"
                         self._logger.error("Password error while opening %s session.", self._type)
+                    except asyncio.TimeoutError:
+                        error = True
+                        error_message = "password_error"
+                        self._logger.error("Password timeout error while opening %s session.", self._type)
         elif resulting_message.is_nonce():
             self._logger.debug("Received nonce: %s", resulting_message)
             if self._gateway.password is not None:
