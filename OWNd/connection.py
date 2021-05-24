@@ -180,9 +180,16 @@ class OWNSession():
                 retry_count += 1
                 retry_timer *= 2
         
-        result = await self._negotiate()
-        await self.close()
+        try:
+            result = await self._negotiate()
+            await self.close()
+        except ConnectionResetError:
+            error = True
+            error_message = "password_retry"
+            self._logger.error("Negotiation reset while opening %s session. Wait 60 seconds before retrying.", self._type)
 
+            return {"Success": not error, "Message": error_message}
+            
         return result
 
     async def close(self) -> None:
@@ -207,6 +214,7 @@ class OWNSession():
         raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
         self._logger.debug("Reply: %s", resulting_message)
+
         if resulting_message.is_NACK():
             self._logger.error("Error while opening %s session.", self._type)
             error = True
@@ -414,14 +422,16 @@ class OWNEventSession(OWNSession):
                     self._logger.error("Event session connection still refused after 5 attempts.")
                     return None
                 self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
-                break
+                await self._negotiate()
             except ConnectionRefusedError:
                 self._logger.warning("Event session connection refused, retrying in %ss.", retry_timer)
                 await asyncio.sleep(retry_timer)
                 retry_count += 1
-                retry_timer *= 2
-
-        await self._negotiate()
+                retry_timer = retry_count*2
+            except ConnectionResetError:
+                self._logger.warning("Event session connection reset, retrying in 60s.")
+                await asyncio.sleep(60)
+                retry_count += 1
     
     async def get_next(self):
         """ Acts as an entry point to read messages on the event bus.
@@ -482,10 +492,14 @@ class OWNCommandSession(OWNSession):
                 negotiation_result = await self._negotiate()
                 break
             except (ConnectionRefusedError, asyncio.IncompleteReadError):
-                self._logger.warning("Command session connection refused or negotiation interrupted, retrying in %ss.", retry_timer)
+                self._logger.warning("Command session connection refused, retrying in %ss.", retry_timer)
                 await asyncio.sleep(retry_timer)
                 retry_count += 1
-                retry_timer *= 2
+                retry_timer = retry_count*2
+            except ConnectionResetError:
+                self._logger.warning("Command session connection reset, retrying in 60s.")
+                await asyncio.sleep(60)
+                retry_count += 1
         
         if negotiation_result["Success"]:
             self._stream_writer.write(message_string)
