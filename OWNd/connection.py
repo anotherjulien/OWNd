@@ -423,7 +423,8 @@ class OWNEventSession(OWNSession):
                     return None
                 self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
                 await self._negotiate()
-            except ConnectionRefusedError:
+                break
+            except (ConnectionRefusedError, asyncio.IncompleteReadError):
                 self._logger.warning("Event session connection refused, retrying in %ss.", retry_timer)
                 await asyncio.sleep(retry_timer)
                 retry_count += 1
