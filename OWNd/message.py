@@ -317,7 +317,9 @@ class OWNLightingEvent(OWNEvent):
 
         self._state = None
         self._brightness = None
+        self._transition = None
         self._timer = None
+        self._blinker = None
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
@@ -327,8 +329,8 @@ class OWNLightingEvent(OWNEvent):
             elif self._state == 1:
                 self._human_readable_log = f"Light {self._where} is switched on."
             elif self._state > 1 and self._state < 11:
-                self._brightness = self._state * 10
-                self._human_readable_log = f"Light {self._where} is switched on at {self._brightness}%."
+                #self._brightness = self._state * 10
+                self._human_readable_log = f"Light {self._where} is switched on at brightness level {self._state}."
             elif self._state == 11:
                 self._timer = 60
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
@@ -353,10 +355,14 @@ class OWNLightingEvent(OWNEvent):
             elif self._state == 18:
                 self._timer = 0.5
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
+            elif self._state >= 20 and self._state <= 29:
+                self._blinker = 0.5 * (self._state - 19)
+                self._human_readable_log = f"Light {self._where} is blinking every {self._blinker}s."
         
         if self._dimension is not None:
-            if self._dimension == 1:
+            if self._dimension == 1 or self._dimension == 4:
                 self._brightness = int(self._dimension_value[0]) - 100
+                self._transition = int(self._dimension_value[1])
                 if self._brightness == 0:
                     self._state = 0
                     self._human_readable_log = f"Light {self._where} is switched off."
@@ -372,12 +378,20 @@ class OWNLightingEvent(OWNEvent):
         return self._brightness
 
     @property
+    def transition(self):
+        return self._transition
+
+    @property
     def is_on(self):
         return self._state > 0
     
     @property
     def timer(self):
         return self._timer
+    
+    @property
+    def blinker(self):
+        return self._blinker
 
 class OWNAutomationEvent(OWNEvent):
     def __init__(self, data):
@@ -1319,22 +1333,42 @@ class OWNLightingCommand(OWNCommand):
         return message
 
     @classmethod
-    def switch_on(cls, where):
-        message = cls(f"*1*1*{where}##")
-        message._human_readable_log = f"Switching ON light or switch {where}."
+    def flash(cls, where, _freqency=0.5):
+        if _freqency is not None and _freqency >= 0.5 and _freqency <= 5:
+            _freqency = round(_freqency * 2) / 2
+        else:
+            _freqency = 0.5
+        _what = (_freqency / 0.5) + 19
+        message = cls(f"*1*{_what}*{where}##")
+        message._human_readable_log = f"Flashing light {where} every {_freqency}s."
         return message
 
     @classmethod
-    def switch_off(cls, where):
-        message = cls(f"*1*0*{where}##")
-        message._human_readable_log = f"Switching OFF light or switch {where}."
+    def switch_on(cls, where, _transition=None):
+        if _transition is not None and _transition >= 0 and _transition <= 255:
+            message = cls(f"*1*1#{_transition}*{where}##")
+            message._human_readable_log = f"Switching ON light {where} with transition speed {_transition}."
+        else:
+            message = cls(f"*1*1*{where}##")
+            message._human_readable_log = f"Switching ON light or switch {where}."
         return message
 
     @classmethod
-    def set_brightness(cls, where, _level=30):
+    def switch_off(cls, where, _transition=None):
+        if _transition is not None and _transition >= 0 and _transition <= 255:
+            message = cls(f"*1*0#{_transition}*{where}##")
+            message._human_readable_log = f"Switching OFF light {where} with transition speed {_transition}."
+        else:
+            message = cls(f"*1*0*{where}##")
+            message._human_readable_log = f"Switching OFF light or switch {where}."
+        return message
+
+    @classmethod
+    def set_brightness(cls, where, _level=30, _transition=0):
         command_level = int(_level)+100
-        message = cls(f"*#1*{where}*#1*{command_level}*0##")
-        message._human_readable_log = f"Setting light {where} brightness to {_level}%."
+        transition_speed = _transition if _transition >= 0 and _transition <= 255 else 0
+        message = cls(f"*#1*{where}*#1*{command_level}*{transition_speed}##")
+        message._human_readable_log = f"Setting light {where} brightness to {_level}% with transition speed {transition_speed}." if transition_speed > 0 else f"Setting light {where} brightness to {_level}%."
         return message
 
 class OWNAutomationCommand(OWNCommand):

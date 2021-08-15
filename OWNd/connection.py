@@ -196,7 +196,7 @@ class OWNSession():
         """ Closes the event connection to the OpenWebNet gateway """
         self._stream_writer.close()
         await self._stream_writer.wait_closed()
-        self._logger.info("%s session closed.", self._type.capitalize())
+        self._logger.debug("%s session closed.", self._type.capitalize())
     
     async def _negotiate(self) -> dict:
 
@@ -301,18 +301,18 @@ class OWNSession():
                     error_message = "password_error"
                     self._logger.error("Password error while opening %s session.", self._type)
                 elif resulting_message.is_ACK():
-                    self._logger.info("%s session established.", self._type.capitalize())
+                    self._logger.debug("%s session established.", self._type.capitalize())
             else:
                 error = True
                 error_message = "password_error"
                 self._logger.error("Connection requires a password but none was provided while opening %s session.", self._type)
         elif resulting_message.is_ACK():
             self._logger.debug("Reply: %s", resulting_message)
-            self._logger.info("%s session established.", self._type.capitalize())
+            self._logger.debug("%s session established.", self._type.capitalize())
         else:
             error = True
             error_message = "negotiation_failed"
-            self._logger.info("Unexpected message during negotiation: %s", resulting_message)
+            self._logger.debug("Unexpected message during negotiation: %s", resulting_message)
 
         return {"Success": not error, "Message": error_message}
 
@@ -478,7 +478,7 @@ class OWNCommandSession(OWNSession):
         """ Send the attached message on a new 'command' connection
         that  is then immediately closed """
 
-        self._logger.info("Opening command session.")
+        self._logger.debug("Opening command session.")
 
         retry_count = 0
         retry_timer = 0.5
@@ -525,4 +525,4 @@ class OWNCommandSession(OWNSession):
         self._stream_writer.close()
         await self._stream_writer.wait_closed()
 
-        self._logger.info("Command session closed.")
+        self._logger.debug("Command session closed.")
