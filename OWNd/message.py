@@ -434,7 +434,7 @@ class OWNAutomationEvent(OWNEvent):
                 self._is_opening = True
                 self._is_closing = False
             elif self._state == 11 or  self._state == 13:
-                self._human_readable_log = f"Cover {self._where} is opening from intial position {self._position}."
+                self._human_readable_log = f"Cover {self._where} is opening from initial position {self._position}."
                 self._is_opening = True
                 self._is_closing = False
                 self._is_closed = False
@@ -443,7 +443,7 @@ class OWNAutomationEvent(OWNEvent):
                 self._is_closing = True
                 self._is_opening = False
             elif self._state == 12 or self._state == 14:
-                self._human_readable_log = f"Cover {self._where} is closing from intial position {self._position}."
+                self._human_readable_log = f"Cover {self._where} is closing from initial position {self._position}."
                 self._is_closing = True
                 self._is_opening = False
                 self._is_closed = False
