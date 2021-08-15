@@ -1124,7 +1124,7 @@ class OWNEnergyEvent(OWNEvent):
             elif self._dimension == 51:
                 self._type = MESSAGE_TYPE_ENERGY_TOTALIZER
                 self._total_consumption = int(self._dimension_value[0])
-                self._human_readable_log = f"Sensor {self._sensor} is reporting a total power consumption of {self._current_day_partial_consumption} Wh."
+                self._human_readable_log = f"Sensor {self._sensor} is reporting a total power consumption of {self._total_consumption} Wh."
             elif self._dimension == 54:
                 self._type = MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION
                 self._current_day_partial_consumption = int(self._dimension_value[0])
@@ -1333,12 +1333,18 @@ class OWNLightingCommand(OWNCommand):
         return message
 
     @classmethod
+    def get_brightness(cls, where):
+        message = cls(f"*#1*{where}*4##")
+        message._human_readable_log = f"Requesting light {where} brightness."
+        return message
+
+    @classmethod
     def flash(cls, where, _freqency=0.5):
         if _freqency is not None and _freqency >= 0.5 and _freqency <= 5:
             _freqency = round(_freqency * 2) / 2
         else:
             _freqency = 0.5
-        _what = (_freqency / 0.5) + 19
+        _what = int((_freqency / 0.5) + 19)
         message = cls(f"*1*{_what}*{where}##")
         message._human_readable_log = f"Flashing light {where} every {_freqency}s."
         return message
