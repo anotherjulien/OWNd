@@ -317,6 +317,7 @@ class OWNLightingEvent(OWNEvent):
 
         self._state = None
         self._brightness = None
+        self._brightness_preset = None
         self._transition = None
         self._timer = None
         self._blinker = None
@@ -329,6 +330,7 @@ class OWNLightingEvent(OWNEvent):
             elif self._state == 1:
                 self._human_readable_log = f"Light {self._where} is switched on."
             elif self._state > 1 and self._state < 11:
+                self._brightness_preset = self._state
                 #self._brightness = self._state * 10
                 self._human_readable_log = f"Light {self._where} is switched on at brightness level {self._state}."
             elif self._state == 11:
@@ -372,6 +374,10 @@ class OWNLightingEvent(OWNEvent):
             elif self._dimension == 2:
                 self._timer = int(self._dimension_value[0])*3600 + int(self._dimension_value[1])*60 + int(self._dimension_value[2])
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
+
+    @property
+    def brightness_preset(self):
+        return self._brightness_preset
 
     @property
     def brightness(self):
