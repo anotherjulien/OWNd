@@ -192,8 +192,31 @@ class OWNSession():
             
         return result
 
+    async def connect(self):
+        self._logger.debug("Opening %s session.", self._type)
+        
+        retry_count = 0
+        retry_timer = 1
+
+        while True:
+            try:
+                if retry_count > 4:
+                    self._logger.error("%s session connection still refused after 5 attempts.", self._type.capitalize())
+                    return None
+                self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
+                return await self._negotiate()
+            except (ConnectionRefusedError, asyncio.IncompleteReadError):
+                self._logger.warning("%s session connection refused, retrying in %ss.", self._type.capitalize(), retry_timer)
+                await asyncio.sleep(retry_timer)
+                retry_count += 1
+                retry_timer = retry_count*2
+            except ConnectionResetError:
+                self._logger.warning("%s session connection reset, retrying in 60s.", self._type.capitalize())
+                await asyncio.sleep(60)
+                retry_count += 1
+
     async def close(self) -> None:
-        """ Closes the event connection to the OpenWebNet gateway """
+        """ Closes the connection to the OpenWebNet gateway """
         self._stream_writer.close()
         await self._stream_writer.wait_closed()
         self._logger.debug("%s session closed.", self._type.capitalize())
@@ -203,8 +226,6 @@ class OWNSession():
         type_id = 0 if self._type == "command" else 1
         error = False
         error_message = None
-        default_password = "12345"
-        default_password_used = False
 
         self._logger.debug("Negotiating %s session.", self._type)
 
@@ -408,31 +429,7 @@ class OWNEventSession(OWNSession):
     @classmethod
     async def connect_to_gateway(cls, gateway: OWNGateway):
         connection = cls(gateway)
-        await connection.connect
-
-    async def connect(self):
-        self._logger.info("Opening event session.")
-        
-        retry_count = 0
-        retry_timer = 1
-
-        while True:
-            try:
-                if retry_count > 4:
-                    self._logger.error("Event session connection still refused after 5 attempts.")
-                    return None
-                self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
-                await self._negotiate()
-                break
-            except (ConnectionRefusedError, asyncio.IncompleteReadError):
-                self._logger.warning("Event session connection refused, retrying in %ss.", retry_timer)
-                await asyncio.sleep(retry_timer)
-                retry_count += 1
-                retry_timer = retry_count*2
-            except ConnectionResetError:
-                self._logger.warning("Event session connection reset, retrying in 60s.")
-                await asyncio.sleep(60)
-                retry_count += 1
+        await connection.connect()
     
     async def get_next(self):
         """ Acts as an entry point to read messages on the event bus.
@@ -454,15 +451,9 @@ class OWNEventSession(OWNSession):
             #traceback.print_tb(e.__traceback__)
             return None
         except Exception as e:
-            self._logger.exception("Error:")
+            self._logger.exception("Event session crashed.")
             #traceback.print_tb(e.__traceback__)
             return None
-
-    async def close(self):
-        """ Closes the event connection to the OpenWebNet gateway """
-        self._stream_writer.close()
-        await self._stream_writer.wait_closed()
-        self._logger.info("Event session closed.")
 
 class OWNCommandSession(OWNSession):
 
@@ -472,57 +463,57 @@ class OWNCommandSession(OWNSession):
     @classmethod
     async def send_to_gateway (cls,  message: str, gateway: OWNGateway):
         connection = cls(gateway)
+        await connection.connect()
         await connection.send(message)
 
+    @classmethod
+    async def connect_to_gateway(cls, gateway: OWNGateway):
+        connection = cls(gateway)
+        await connection.connect()
+
     async def send(self, message: str, is_status_request: bool = False):
-        """ Send the attached message on a new 'command' connection
-        that  is then immediately closed """
+        """ Send the attached message on an existing 'command' connection,
+        actively reconnecting it if it had been reset. """
 
-        self._logger.debug("Opening command session.")
-
-        retry_count = 0
-        retry_timer = 0.5
-
-        while True:
-            try:
-                if retry_count > 3:
-                    self._logger.error("Command session connection still refused after 4 attempts.")
-                    return None
-                self._stream_reader, self._stream_writer = await asyncio.open_connection(self._gateway.address, self._gateway.port)
-                message_string = str(message).encode()
-                negotiation_result = await self._negotiate()
-                break
-            except (ConnectionRefusedError, asyncio.IncompleteReadError):
-                self._logger.warning("Command session connection refused, retrying in %ss.", retry_timer)
-                await asyncio.sleep(retry_timer)
-                retry_count += 1
-                retry_timer = retry_count*2
-            except ConnectionResetError:
-                self._logger.warning("Command session connection reset, retrying in 60s.")
-                await asyncio.sleep(60)
-                retry_count += 1
-        
-        if negotiation_result["Success"]:
-            self._stream_writer.write(message_string)
+        try:
+            self._stream_writer.write(str(message).encode())
             await self._stream_writer.drain()
-            if not  is_status_request:
+            raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+            resulting_message = OWNMessage.parse(raw_response.decode())
+            if isinstance(resulting_message, OWNSignaling) and resulting_message.is_NACK():
+                self._stream_writer.write(str(message).encode())
+                await self._stream_writer.drain()
                 raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-                resulting_message = OWNMessage.parse(raw_response.decode())
-                if isinstance(resulting_message, OWNSignaling) and resulting_message.is_NACK():
-                    self._stream_writer.write(message_string)
-                    await self._stream_writer.drain()
-                    raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-                    resulting_message = OWNSignaling(raw_response.decode())
-                    if resulting_message.is_NACK():
-                        self._logger.error("Could not send message %s.", message)
-                    elif resulting_message.is_ACK():
+                resulting_message = OWNSignaling(raw_response.decode())
+                if resulting_message.is_NACK():
+                    self._logger.error("Could not send message %s.", message)
+                elif resulting_message.is_ACK():
+                    if not is_status_request:
                         self._logger.info("Message %s was successfully sent.", message)
-                elif isinstance(resulting_message, OWNSignaling) and resulting_message.is_ACK():
+                    else:
+                        self._logger.debug("Message %s was successfully sent.", message)
+            elif isinstance(resulting_message, OWNSignaling) and resulting_message.is_ACK():
+                if not is_status_request: 
                     self._logger.info("Message %s was successfully sent.", message)
                 else:
-                    self._logger.info("Message %s received response %s.", message,  resulting_message)
+                    self._logger.debug("Message %s was successfully sent.", message)
+            else:
+                self._logger.debug("Message %s received response %s.", message,  resulting_message)
+                raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
+                resulting_message = OWNSignaling(raw_response.decode())
+                if resulting_message.is_NACK():
+                    self._logger.error("Could not send message %s.", message)
+                elif resulting_message.is_ACK():
+                    if not is_status_request:
+                        self._logger.info("Message %s was successfully sent.", message)
+                    else:
+                        self._logger.debug("Message %s was successfully sent.", message)
 
-        self._stream_writer.close()
-        await self._stream_writer.wait_closed()
-
-        self._logger.debug("Command session closed.")
+        except (ConnectionResetError, asyncio.IncompleteReadError):
+                self._logger.debug("Command session connection reset, retrying...")
+                await self.connect()
+                await self.send(message=message, is_status_request=is_status_request)
+        except Exception as e:
+            self._logger.exception("Command session crashed.")
+            #traceback.print_tb(ex.__traceback__)
+            return None
