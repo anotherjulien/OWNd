@@ -21,6 +21,8 @@ MESSAGE_TYPE_LOCAL_TARGET_TEMPERATURE = "local_targer_temperature"
 MESSAGE_TYPE_MODE = "hvac_mode"
 MESSAGE_TYPE_MODE_TARGET = "hvac_mode_target"
 MESSAGE_TYPE_ACTION = "hvac_action"
+MESSAGE_TYPE_MOTION = "motion_detected"
+MESSAGE_TYPE_ILLUMINANCE = "illuminance_value"
 
 CLIMATE_MODE_OFF = "off"
 CLIMATE_MODE_HEAT = "heat"
@@ -315,54 +317,59 @@ class OWNLightingEvent(OWNEvent):
     def __init__(self, data):
         super().__init__(data)
 
+        self._type = None
         self._state = None
         self._brightness = None
         self._brightness_preset = None
         self._transition = None
         self._timer = None
         self._blinker = None
+        self._illuminance = None
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
 
-            if self._state == 0:
+            if self._state == 0:                                            # Light off
                 self._human_readable_log = f"Light {self._where} is switched off."
-            elif self._state == 1:
+            elif self._state == 1:                                          # Light on
                 self._human_readable_log = f"Light {self._where} is switched on."
-            elif self._state > 1 and self._state < 11:
+            elif self._state > 1 and self._state < 11:                      # Light dimmed to preset value
                 self._brightness_preset = self._state
                 #self._brightness = self._state * 10
                 self._human_readable_log = f"Light {self._where} is switched on at brightness level {self._state}."
-            elif self._state == 11:
+            elif self._state == 11:                                         # Timer at 1m
                 self._timer = 60
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state == 12:
+            elif self._state == 12:                                         # Timer at 2m
                 self._timer = 120
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state == 13:
+            elif self._state == 13:                                         # Timer at 3m
                 self._timer = 180
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state == 14:
+            elif self._state == 14:                                         # Timer at 4m
                 self._timer = 240
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state == 15:
+            elif self._state == 15:                                         # Timer at 5m
                 self._timer = 300
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state == 16:
+            elif self._state == 16:                                         # Timer at 15m
                 self._timer = 900
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state == 17:
+            elif self._state == 17:                                         # Timer at 30s
                 self._timer = 30
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state == 18:
+            elif self._state == 18:                                         # Timer at 0.5s
                 self._timer = 0.5
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
-            elif self._state >= 20 and self._state <= 29:
+            elif self._state >= 20 and self._state <= 29:                   # Light blinking
                 self._blinker = 0.5 * (self._state - 19)
                 self._human_readable_log = f"Light {self._where} is blinking every {self._blinker}s."
+            elif self._state == 34:                                         # Motion detected
+                self._type = MESSAGE_TYPE_MOTION
+                self._human_readable_log = f"Light motion sensor {self._where} detected motion"
         
         if self._dimension is not None:
-            if self._dimension == 1 or self._dimension == 4:
+            if self._dimension == 1 or self._dimension == 4:                # Brightness value
                 self._brightness = int(self._dimension_value[0]) - 100
                 self._transition = int(self._dimension_value[1])
                 if self._brightness == 0:
@@ -371,9 +378,16 @@ class OWNLightingEvent(OWNEvent):
                 else:
                     self._state = 1
                     self._human_readable_log = f"Light {self._where} is switched on at {self._brightness}%."
-            elif self._dimension == 2:
+            elif self._dimension == 2:                                      # Time value
                 self._timer = int(self._dimension_value[0])*3600 + int(self._dimension_value[1])*60 + int(self._dimension_value[2])
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
+            elif self._dimension == 6:                                      # Illuminance value
+                self._type = MESSAGE_TYPE_ILLUMINANCE
+                self._illuminance = int(self._dimension_value[0])
+                self._human_readable_log = f"Light motion sensor {self._where} detected an illuminance value of {self._illuminance} lx."
+    @property
+    def message_type(self):
+        return self._type
 
     @property
     def brightness_preset(self):
