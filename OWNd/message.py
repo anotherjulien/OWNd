@@ -1,6 +1,7 @@
 """ This module contains OpenWebNet messages definition """
 
 import datetime
+from typing import Protocol
 from dateutil.relativedelta import relativedelta
 import pytz
 import re
@@ -22,12 +23,16 @@ MESSAGE_TYPE_MODE = "hvac_mode"
 MESSAGE_TYPE_MODE_TARGET = "hvac_mode_target"
 MESSAGE_TYPE_ACTION = "hvac_action"
 MESSAGE_TYPE_MOTION = "motion_detected"
+MESSAGE_TYPE_PIR_SENSITIVITY = "pir_sensitivity"
 MESSAGE_TYPE_ILLUMINANCE = "illuminance_value"
+MESSAGE_TYPE_MOTION_TIMEOUT = "motion_timeout"
 
 CLIMATE_MODE_OFF = "off"
 CLIMATE_MODE_HEAT = "heat"
 CLIMATE_MODE_COOL = "cool"
 CLIMATE_MODE_AUTO = "auto"
+
+PIR_SENSITIVITY_MAPPING = ["low", "medium", "high", "very high"]
 
 class OWNMessage():
 
@@ -293,7 +298,7 @@ class OWNEvent(OWNMessage):
                 elif _where.startswith('3'):
                     return OWNDryContactEvent(data)
 
-        return None
+        return data
 
 class OWNScenarioEvent(OWNEvent):
 
@@ -325,6 +330,9 @@ class OWNLightingEvent(OWNEvent):
         self._timer = None
         self._blinker = None
         self._illuminance = None
+        self._motion = False
+        self._pir_sensitivity = None
+        self._motion_timout = None
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
@@ -366,6 +374,7 @@ class OWNLightingEvent(OWNEvent):
                 self._human_readable_log = f"Light {self._where} is blinking every {self._blinker}s."
             elif self._state == 34:                                         # Motion detected
                 self._type = MESSAGE_TYPE_MOTION
+                self._motion = True
                 self._human_readable_log = f"Light motion sensor {self._where} detected motion"
         
         if self._dimension is not None:
@@ -381,13 +390,31 @@ class OWNLightingEvent(OWNEvent):
             elif self._dimension == 2:                                      # Time value
                 self._timer = int(self._dimension_value[0])*3600 + int(self._dimension_value[1])*60 + int(self._dimension_value[2])
                 self._human_readable_log = f"Light {self._where} is switched on for {self._timer}s."
+            elif self._dimension == 5:                                      # PIR sensitivity
+                self._type = MESSAGE_TYPE_PIR_SENSITIVITY
+                self._pir_sensitivity = int(self._dimension_value[0])
+                self._human_readable_log = f"Light/motion sensor {self._where} PIR sesitivity is {PIR_SENSITIVITY_MAPPING[self._pir_sensitivity]}."
             elif self._dimension == 6:                                      # Illuminance value
                 self._type = MESSAGE_TYPE_ILLUMINANCE
                 self._illuminance = int(self._dimension_value[0])
-                self._human_readable_log = f"Light motion sensor {self._where} detected an illuminance value of {self._illuminance} lx."
+                self._human_readable_log = f"Light/motion sensor {self._where} detected an illuminance value of {self._illuminance} lx."
+            elif self._dimension == 7:                                      # Motion timeout value
+                self._type = MESSAGE_TYPE_MOTION_TIMEOUT
+                self._motion_timout = datetime.timedelta(hours=int(self._dimension_value[0]), minutes=int(self._dimension_value[1]), seconds=int(self._dimension_value[2]))
+                self._human_readable_log = f"Light/motion sensor {self._where} has timeout set to {self._motion_timout}."
     @property
     def message_type(self):
         return self._type
+
+    @property
+    def entity(self) -> str:
+        _message_type_mapping = {
+            MESSAGE_TYPE_ILLUMINANCE: "-illuminance", 
+            MESSAGE_TYPE_MOTION: "-motion", 
+            MESSAGE_TYPE_PIR_SENSITIVITY: "-motion", 
+            MESSAGE_TYPE_MOTION_TIMEOUT: "-motion"
+            }
+        return f"{self.unique_id}{_message_type_mapping.get(self._type, '')}"
 
     @property
     def brightness_preset(self):
@@ -402,8 +429,8 @@ class OWNLightingEvent(OWNEvent):
         return self._transition
 
     @property
-    def is_on(self):
-        return self._state > 0
+    def is_on(self) -> bool:
+        return 0 < self._state < 32
     
     @property
     def timer(self):
@@ -412,6 +439,22 @@ class OWNLightingEvent(OWNEvent):
     @property
     def blinker(self):
         return self._blinker
+
+    @property
+    def illuminance(self):
+        return self._illuminance
+
+    @property
+    def motion(self) -> bool:
+        return self._motion
+    
+    @property
+    def pir_sensitivity(self):
+        return self._pir_sensitivity
+
+    @property
+    def motion_timout(self) -> datetime.timedelta:
+        return self._motion_timout
 
 class OWNAutomationEvent(OWNEvent):
     def __init__(self, data):
@@ -1165,6 +1208,16 @@ class OWNEnergyEvent(OWNEvent):
         return self._type
 
     @property
+    def entity(self) -> str:
+        _message_type_mapping = {
+            MESSAGE_TYPE_ACTIVE_POWER: "-power", 
+            MESSAGE_TYPE_ENERGY_TOTALIZER: "-total-energy", 
+            MESSAGE_TYPE_CURRENT_MONTH_CONSUMPTION: "-monthly-energy", 
+            MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION: "-daily-energy"
+            }
+        return f"{self.unique_id}{_message_type_mapping.get(self._type, '')}"
+
+    @property
     def active_power(self):
         return self._active_power
 
@@ -1356,6 +1409,24 @@ class OWNLightingCommand(OWNCommand):
     def get_brightness(cls, where):
         message = cls(f"*#1*{where}*4##")
         message._human_readable_log = f"Requesting light {where} brightness."
+        return message
+
+    @classmethod
+    def get_pir_sensitivity(cls, where):
+        message = cls(f"*#1*{where}*5##")
+        message._human_readable_log = f"Requesting light/motion sensor {where} PIR sensitivity."
+        return message
+
+    @classmethod
+    def get_illuminance(cls, where):
+        message = cls(f"*#1*{where}*6##")
+        message._human_readable_log = f"Requesting light/motion sensor {where} illuminance."
+        return message
+
+    @classmethod
+    def get_motion_timeout(cls, where):
+        message = cls(f"*#1*{where}*7##")
+        message._human_readable_log = f"Requesting light/motion sensor {where} motion timeout."
         return message
 
     @classmethod
