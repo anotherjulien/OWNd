@@ -332,7 +332,7 @@ class OWNLightingEvent(OWNEvent):
         self._illuminance = None
         self._motion = False
         self._pir_sensitivity = None
-        self._motion_timout = None
+        self._motion_timeout = None
 
         if self._what is not None and self._what != 1000:
             self._state = self._what
@@ -400,8 +400,8 @@ class OWNLightingEvent(OWNEvent):
                 self._human_readable_log = f"Light/motion sensor {self._where} detected an illuminance value of {self._illuminance} lx."
             elif self._dimension == 7:                                      # Motion timeout value
                 self._type = MESSAGE_TYPE_MOTION_TIMEOUT
-                self._motion_timout = datetime.timedelta(hours=int(self._dimension_value[0]), minutes=int(self._dimension_value[1]), seconds=int(self._dimension_value[2]))
-                self._human_readable_log = f"Light/motion sensor {self._where} has timeout set to {self._motion_timout}."
+                self._motion_timeout = datetime.timedelta(hours=int(self._dimension_value[0]), minutes=int(self._dimension_value[1]), seconds=int(self._dimension_value[2]))
+                self._human_readable_log = f"Light/motion sensor {self._where} has timeout set to {self._motion_timeout}."
     @property
     def message_type(self):
         return self._type
@@ -453,8 +453,8 @@ class OWNLightingEvent(OWNEvent):
         return self._pir_sensitivity
 
     @property
-    def motion_timout(self) -> datetime.timedelta:
-        return self._motion_timout
+    def motion_timeout(self) -> datetime.timedelta:
+        return self._motion_timeout
 
 class OWNAutomationEvent(OWNEvent):
     def __init__(self, data):
