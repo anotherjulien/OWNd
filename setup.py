@@ -1,11 +1,13 @@
+""" PyPi setup file for OWNd. """
+
 import setuptools
 
-with open("README.md", "r") as fh:
+with open("README.md", encoding="utf-8", mode="r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="OWNd",
-    version="0.7.36",
+    version="0.7.37",
     author="anotherjulien",
     url="https://github.com/anotherjulien/OWNd",
     author_email="yetanotherjulien@gmail.com",
@@ -19,5 +21,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=["aiohttp", "pytz", "python-dateutil"],
-    python_requires='>=3.8',
+    python_requires=">=3.8",
 )

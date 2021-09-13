@@ -1,12 +1,13 @@
+""" OWNd mechanism for discovering gateways on local network """
+
 import asyncio
 import email.parser
-import errno
-import logging
 import socket
 import xml.dom.minidom
 from urllib.parse import urlparse
 
 import aiohttp
+
 
 class SSDPMessage:
     """Simplified HTTP message to serve as a SSDP message."""
@@ -55,6 +56,7 @@ class SSDPMessage:
         _bytes = _bytes + b"\r\n\r\n"
         return _bytes
 
+
 class SSDPResponse(SSDPMessage):
     """Simple Service Discovery Protocol (SSDP) response."""
 
@@ -81,6 +83,7 @@ class SSDPResponse(SSDPMessage):
             lines.append("%s: %s" % header)
         return "\n".join(lines)
 
+
 class SSDPRequest(SSDPMessage):
     """Simple Service Discovery Protocol (SSDP) request."""
 
@@ -105,12 +108,14 @@ class SSDPRequest(SSDPMessage):
             lines.append("%s: %s" % header)
         return "\n".join(lines)
 
+
 class SimpleServiceDiscoveryProtocol(asyncio.DatagramProtocol):
     """
     Simple Service Discovery Protocol (SSDP).
     SSDP is part of UPnP protocol stack. For more information see:
     https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol
     """
+
     def __init__(self, recvq, excq):
         """
         @param recvq    - asyncio.Queue for new datagrams
@@ -123,23 +128,43 @@ class SimpleServiceDiscoveryProtocol(asyncio.DatagramProtocol):
         self._transport = None
 
     def connection_made(self, transport):
-        self.transport = transport
+        self._transport = transport
 
     def datagram_received(self, data, addr):
         data = data.decode()
 
         if data.startswith("HTTP/"):
             response = SSDPResponse.parse(data)
-            if (response.headers_dictionary['USN'].startswith("uuid:pnp-webserver-") or 
-                response.headers_dictionary['USN'].startswith("uuid:pnp-scheduler-") or 
-                response.headers_dictionary['USN'].startswith("uuid:pnp-scheduler201-") or 
-                response.headers_dictionary['USN'].startswith("uuid:pnp-touchscreen-") or 
-                response.headers_dictionary['USN'].startswith("uuid:pnp-myhomeserver1-") or 
-                response.headers_dictionary['USN'].startswith("uuid:upnp-Basic gateway-") or 
-                response.headers_dictionary['USN'].startswith("uuid:upnp-IPscenariomodule-") or 
-                response.headers_dictionary['USN'].startswith("uuid:upnp-IPscenarioModule-")):
+            if (
+                response.headers_dictionary["USN"].startswith("uuid:pnp-webserver-")
+                or response.headers_dictionary["USN"].startswith("uuid:pnp-scheduler-")
+                or response.headers_dictionary["USN"].startswith(
+                    "uuid:pnp-scheduler201-"
+                )
+                or response.headers_dictionary["USN"].startswith(
+                    "uuid:pnp-touchscreen-"
+                )
+                or response.headers_dictionary["USN"].startswith(
+                    "uuid:pnp-myhomeserver1-"
+                )
+                or response.headers_dictionary["USN"].startswith(
+                    "uuid:upnp-Basic gateway-"
+                )
+                or response.headers_dictionary["USN"].startswith(
+                    "uuid:upnp-IPscenariomodule-"
+                )
+                or response.headers_dictionary["USN"].startswith(
+                    "uuid:upnp-IPscenarioModule-"
+                )
+            ):
 
-                self._recvq.put_nowait({"address": addr[0], "ssdp_location": response.headers_dictionary['LOCATION'], "ssdp_st": response.headers_dictionary['ST']})
+                self._recvq.put_nowait(
+                    {
+                        "address": addr[0],
+                        "ssdp_location": response.headers_dictionary["LOCATION"],
+                        "ssdp_st": response.headers_dictionary["ST"],
+                    }
+                )
 
     def error_received(self, exc):
         self._excq.put_nowait(exc)
@@ -152,7 +177,8 @@ class SimpleServiceDiscoveryProtocol(asyncio.DatagramProtocol):
             self._transport.close()
             self._transport = None
 
-def _get_soap_body(ns: str, action: str) -> str:
+
+def _get_soap_body(namespace: str, action: str) -> str:
     soap_body = f"""
         <?xml version="1.0"?>
 
@@ -161,7 +187,7 @@ def _get_soap_body(ns: str, action: str) -> str:
         soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding">
 
         <soap:Body>
-        <m:{action} xmlns:m="{ns}">
+        <m:{action} xmlns:m="{namespace}">
         </m:{action}>
         </soap:Body>
 
@@ -169,28 +195,31 @@ def _get_soap_body(ns: str, action: str) -> str:
     """
     return soap_body
 
-async def get_port(SCPD_location: str) -> int:
 
-    host = urlparse(SCPD_location).netloc
-    scheme = urlparse(SCPD_location).scheme
+async def get_port(scpd_location: str) -> int:
+
+    host = urlparse(scpd_location).netloc
+    scheme = urlparse(scpd_location).scheme
     try:
         async with aiohttp.ClientSession() as session:
-            
+
             service_ns = "urn:schemas-bticino-it:service:openserver:1"
             service_action = "getopenserverPort"
             service_control = "upnp/pwdControl"
             soap_body = _get_soap_body(service_ns, service_action)
             soap_action = f"{service_ns}#{service_action}"
             headers = {
-                'SOAPAction': f'"{soap_action}"',
-                'Host': f"{host}",
-                'Content-Type': 'text/xml',
-                'Content-Length': str(len(soap_body)),
+                "SOAPAction": f'"{soap_action}"',
+                "Host": f"{host}",
+                "Content-Type": "text/xml",
+                "Content-Length": str(len(soap_body)),
             }
 
             ctrl_url = f"{scheme}://{host}/{service_control}"
             resp = await session.post(ctrl_url, data=soap_body, headers=headers)
-            soap_response = xml.dom.minidom.parseString(await resp.text()).documentElement
+            soap_response = xml.dom.minidom.parseString(
+                await resp.text()
+            ).documentElement
             await session.close()
 
         return int(soap_response.getElementsByTagName("Port")[0].childNodes[0].data)
@@ -199,29 +228,51 @@ async def get_port(SCPD_location: str) -> int:
     except aiohttp.client_exceptions.ClientOSError:
         return 20000
 
-async def _get_scpd_details(SCPD_location: str) -> dict:
+
+async def _get_scpd_details(scpd_location: str) -> dict:
 
     discovery_info = dict()
-    
+
     async with aiohttp.ClientSession() as session:
-        scpd_response = await session.get(SCPD_location)
-        scpd_xml = xml.dom.minidom.parseString(await scpd_response.text()).documentElement
+        scpd_response = await session.get(scpd_location)
+        scpd_xml = xml.dom.minidom.parseString(
+            await scpd_response.text()
+        ).documentElement
 
-        discovery_info["deviceType"] = scpd_xml.getElementsByTagName("deviceType")[0].childNodes[0].data
-        discovery_info["friendlyName"] = scpd_xml.getElementsByTagName("friendlyName")[0].childNodes[0].data
-        discovery_info["manufacturer"] = scpd_xml.getElementsByTagName("manufacturer")[0].childNodes[0].data
-        discovery_info["manufacturerURL"] = scpd_xml.getElementsByTagName("manufacturerURL")[0].childNodes[0].data
-        discovery_info["modelName"] = scpd_xml.getElementsByTagName("modelName")[0].childNodes[0].data
-        discovery_info["modelNumber"] = scpd_xml.getElementsByTagName("modelNumber")[0].childNodes[0].data
-        #discovery_info["presentationURL"] = scpd_xml.getElementsByTagName("presentationURL")[0].childNodes[0].data  ## bticino did not populate this field
-        discovery_info["serialNumber"] = scpd_xml.getElementsByTagName("serialNumber")[0].childNodes[0].data
-        discovery_info["UDN"] = scpd_xml.getElementsByTagName("UDN")[0].childNodes[0].data
+        discovery_info["deviceType"] = (
+            scpd_xml.getElementsByTagName("deviceType")[0].childNodes[0].data
+        )
+        discovery_info["friendlyName"] = (
+            scpd_xml.getElementsByTagName("friendlyName")[0].childNodes[0].data
+        )
+        discovery_info["manufacturer"] = (
+            scpd_xml.getElementsByTagName("manufacturer")[0].childNodes[0].data
+        )
+        discovery_info["manufacturerURL"] = (
+            scpd_xml.getElementsByTagName("manufacturerURL")[0].childNodes[0].data
+        )
+        discovery_info["modelName"] = (
+            scpd_xml.getElementsByTagName("modelName")[0].childNodes[0].data
+        )
+        discovery_info["modelNumber"] = (
+            scpd_xml.getElementsByTagName("modelNumber")[0].childNodes[0].data
+        )
+        # discovery_info["presentationURL"] = (
+        #     scpd_xml.getElementsByTagName("presentationURL")[0].childNodes[0].data
+        # )  ## bticino did not populate this field
+        discovery_info["serialNumber"] = (
+            scpd_xml.getElementsByTagName("serialNumber")[0].childNodes[0].data
+        )
+        discovery_info["UDN"] = (
+            scpd_xml.getElementsByTagName("UDN")[0].childNodes[0].data
+        )
 
-        discovery_info["port"] = await get_port(SCPD_location)
+        discovery_info["port"] = await get_port(scpd_location)
 
         await session.close()
 
     return discovery_info
+
 
 async def find_gateways() -> list:
 
@@ -232,18 +283,25 @@ async def find_gateways() -> list:
     recvq = asyncio.Queue()
     excq = asyncio.Queue()
 
-    search_request = bytes(SSDPRequest(
-        "M-SEARCH",
-        headers={
-            "MX": "2",
-            "ST": "upnp:rootdevice",
-            "MAN": '"ssdp:discover"',
-            "HOST": "239.255.255.250:1900",
-            "Content-Length": "0",
-        },
-    ))
+    search_request = bytes(
+        SSDPRequest(
+            "M-SEARCH",
+            headers={
+                "MX": "2",
+                "ST": "upnp:rootdevice",
+                "MAN": '"ssdp:discover"',
+                "HOST": "239.255.255.250:1900",
+                "Content-Length": "0",
+            },
+        )
+    )
 
-    transport, protocol = await loop.create_datagram_endpoint(lambda: SimpleServiceDiscoveryProtocol(recvq, excq), family=socket.AF_INET) # pylint: disable=unused-variable
+    (
+        transport,
+        protocol,  # pylint: disable=unused-variable
+    ) = await loop.create_datagram_endpoint(
+        lambda: SimpleServiceDiscoveryProtocol(recvq, excq), family=socket.AF_INET
+    )
     transport.sendto(search_request, ("239.255.255.250", 1900))
     try:
         await asyncio.sleep(2)
@@ -255,14 +313,16 @@ async def find_gateways() -> list:
         discovery_info.update(await _get_scpd_details(discovery_info["ssdp_location"]))
 
         return_list.append(discovery_info)
-    
+
     return return_list
 
+
 async def get_gateway(address: str) -> dict:
-    local_gateways = await find_gateways()
-    for gateway in local_gateways:
-        if gateway["address"] == address:
-            return gateway
+    _local_gateways = await find_gateways()
+    for _gateway in _local_gateways:
+        if _gateway["address"] == address:
+            return _gateway
+
 
 if __name__ == "__main__":
     local_gateways = asyncio.run(find_gateways())
