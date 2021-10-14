@@ -2,7 +2,6 @@
 
 import datetime
 import re
-from dateutil.relativedelta import relativedelta
 import pytz
 
 MESSAGE_TYPE_ACTIVE_POWER = "active_power"
@@ -324,7 +323,7 @@ class OWNEvent(OWNMessage):
                 elif _where.startswith("3"):
                     return OWNDryContactEvent(data)
 
-        return data
+        return cls(data)
 
 
 class OWNScenarioEvent(OWNEvent):
@@ -420,7 +419,7 @@ class OWNLightingEvent(OWNEvent):
                 self._type = MESSAGE_TYPE_MOTION
                 self._motion = True
                 self._human_readable_log = (
-                    f"Light motion sensor {self._where} detected motion"
+                    f"Light/motion sensor {self._where} detected motion"
                 )
 
         if self._dimension is not None:
@@ -684,7 +683,7 @@ class OWNHeatingEvent(OWNEvent):
                 self._mode_name = None
                 self._human_readable_log = f"Zone {self._zone}'s mode is unknown"
 
-            if self._what_param and self._what_param[0] is not None:
+            if self._type == MESSAGE_TYPE_MODE and self._what_param and self._what_param[0] is not None:
                 self._type = MESSAGE_TYPE_MODE_TARGET
                 self._set_temperature = float(
                     f"{self._what_param[0][1:3]}.{self._what_param[0][-1]}"
@@ -1623,7 +1622,7 @@ class OWNCommand(OWNMessage):
                 elif _where.startswith("3"):
                     return OWNDryContactCommand(data)
 
-        return None
+        return cls(data)
 
 
 class OWNLightingCommand(OWNCommand):
@@ -1983,8 +1982,8 @@ class OWNEnergyCommand(OWNCommand):
     def get_daily_consumption(cls, where, year, month):
         where = f"{where}#0" if str(where).startswith("7") else str(where)
         today = datetime.date.today()
-        one_year_ago = today - relativedelta(years=1)
-        two_year_ago = today - relativedelta(years=2)
+        one_year_ago = today - datetime.timedelta(years=1)
+        two_year_ago = today - datetime.timedelta(years=2)
         target = datetime.date(year=year, month=month, day=1)
         if target > today:
             return None
