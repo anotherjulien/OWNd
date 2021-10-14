@@ -684,7 +684,7 @@ class OWNHeatingEvent(OWNEvent):
                 self._mode_name = None
                 self._human_readable_log = f"Zone {self._zone}'s mode is unknown"
 
-            if self._what_param and self._what_param[0] is not None:
+            if self._type == MESSAGE_TYPE_MODE and self._what_param and self._what_param[0] is not None:
                 self._type = MESSAGE_TYPE_MODE_TARGET
                 self._set_temperature = float(
                     f"{self._what_param[0][1:3]}.{self._what_param[0][-1]}"
@@ -1635,7 +1635,7 @@ class OWNLightingCommand(OWNCommand):
 
     @classmethod
     def get_brightness(cls, where):
-        message = cls(f"*#1*{where}*4##")
+        message = cls(f"*#1*{where}*1##")
         message._human_readable_log = f"Requesting light {where} brightness."
         return message
 
