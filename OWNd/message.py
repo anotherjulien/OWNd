@@ -420,7 +420,7 @@ class OWNLightingEvent(OWNEvent):
                 self._type = MESSAGE_TYPE_MOTION
                 self._motion = True
                 self._human_readable_log = (
-                    f"Light motion sensor {self._where} detected motion"
+                    f"Light/motion sensor {self._where} detected motion"
                 )
 
         if self._dimension is not None:
@@ -684,7 +684,11 @@ class OWNHeatingEvent(OWNEvent):
                 self._mode_name = None
                 self._human_readable_log = f"Zone {self._zone}'s mode is unknown"
 
-            if self._type == MESSAGE_TYPE_MODE and self._what_param and self._what_param[0] is not None:
+            if (
+                self._type == MESSAGE_TYPE_MODE
+                and self._what_param
+                and self._what_param[0] is not None
+            ):
                 self._type = MESSAGE_TYPE_MODE_TARGET
                 self._set_temperature = float(
                     f"{self._what_param[0][1:3]}.{self._what_param[0][-1]}"
