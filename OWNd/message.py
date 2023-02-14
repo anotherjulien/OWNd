@@ -204,6 +204,12 @@ class OWNMessage:
         return self._where  # [1:] if self._where.startswith('#') else self._where
 
     @property
+    def interface(self) -> str:
+        """The 'where' parameter corresponding to the bus interface of the subject of this message"""
+        return self._where_param[1] if len(self._where_param) > 0 and self._where_param[0] == '4' else ''
+
+
+    @property
     def dimension(self) -> str:
         """The 'where' ID of the subject of this message"""
         return self._dimension
@@ -216,7 +222,7 @@ class OWNMessage:
     @property
     def unique_id(self) -> str:
         """The ID of the subject of this message"""
-        return f"{self.who}-{self.where}"
+        return f"{self.who}-{self.where}#4#{self.interface}" if self.interface != '' else f"{self.who}-{self.where}"
 
     @property
     def human_readable_log(self) -> str:
@@ -464,16 +470,6 @@ class OWNLightingEvent(OWNEvent):
     @property
     def message_type(self):
         return self._type
-
-    @property
-    def entity(self) -> str:
-        _message_type_mapping = {
-            MESSAGE_TYPE_ILLUMINANCE: "-illuminance",
-            MESSAGE_TYPE_MOTION: "-motion",
-            MESSAGE_TYPE_PIR_SENSITIVITY: "-motion",
-            MESSAGE_TYPE_MOTION_TIMEOUT: "-motion",
-        }
-        return f"{self.unique_id}{_message_type_mapping.get(self._type, '')}"
 
     @property
     def brightness_preset(self):
@@ -1436,16 +1432,6 @@ class OWNEnergyEvent(OWNEvent):
     @property
     def message_type(self):
         return self._type
-
-    @property
-    def entity(self) -> str:
-        _message_type_mapping = {
-            MESSAGE_TYPE_ACTIVE_POWER: "-power",
-            MESSAGE_TYPE_ENERGY_TOTALIZER: "-total-energy",
-            MESSAGE_TYPE_CURRENT_MONTH_CONSUMPTION: "-monthly-energy",
-            MESSAGE_TYPE_CURRENT_DAY_CONSUMPTION: "-daily-energy",
-        }
-        return f"{self.unique_id}{_message_type_mapping.get(self._type, '')}"
 
     @property
     def active_power(self):
