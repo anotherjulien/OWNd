@@ -35,7 +35,6 @@ PIR_SENSITIVITY_MAPPING = ["low", "medium", "high", "very high"]
 
 
 class OWNMessage:
-
     _ACK = re.compile(r"^\*#\*1##$")  #  *#*1##
     _NACK = re.compile(r"^\*#\*0##$")  #  *#*0##
     _COMMAND_SESSION = re.compile(r"^\*99\*0##$")  #  *99*0##
@@ -206,8 +205,11 @@ class OWNMessage:
     @property
     def interface(self) -> str:
         """The 'where' parameter corresponding to the bus interface of the subject of this message"""
-        return self._where_param[1] if len(self._where_param) > 0 and self._where_param[0] == '4' else ''
-
+        return (
+            self._where_param[1]
+            if len(self._where_param) > 0 and self._where_param[0] == "4"
+            else ""
+        )
 
     @property
     def dimension(self) -> str:
@@ -222,7 +224,11 @@ class OWNMessage:
     @property
     def unique_id(self) -> str:
         """The ID of the subject of this message"""
-        return f"{self.who}-{self.where}#4#{self.interface}" if self.interface != '' else f"{self.who}-{self.where}"
+        return (
+            f"{self.who}-{self.where}#4#{self.interface}"
+            if self.interface != ""
+            else f"{self.who}-{self.where}"
+        )
 
     @property
     def human_readable_log(self) -> str:
@@ -947,7 +953,7 @@ class OWNAlarmEvent(OWNEvent):
                 self._sensor = int(self._zone[1:])
                 self._zone = int(self._zone[0])
             self._human_readable_log = f"Zone {self._zone} is reporting: "
-        else:
+        elif len(self._where) > 1:
             self._zone = int(self._where[0])
             self._sensor = int(self._where[1:])
             if self._zone == 0:
@@ -958,6 +964,9 @@ class OWNAlarmEvent(OWNEvent):
                 self._human_readable_log = (
                     f"Sensor {self._sensor} in zone {self._zone} is reporting: "
                 )
+        else:
+            self._system = True
+            self._human_readable_log = "Control panel is reporting: "
 
         if self._state_code == 0:
             self._state = "maintenance"
@@ -1285,6 +1294,8 @@ class OWNSceneEvent(OWNEvent):
             _status = "enabled"
         elif self._state == 4:
             _status = "disabled"
+        else:
+            _status = f"unknonwn ({self._state})"
 
         self._human_readable_log = f"Scene {self._scene} is {_status}."
 
