@@ -67,6 +67,8 @@ class OWNGateway:
         # Attributes retrieved from SOAP service control
         self.port = discovery_info["port"] if "port" in discovery_info else None
 
+        self._log_id = f"[{self.model_name} gateway - {self.host}]"
+
     @property
     def unique_id(self) -> str:
         return self.serial_number
@@ -109,7 +111,11 @@ class OWNGateway:
 
     @property
     def log_id(self) -> str:
-        return f"[{self.model_name} gateway - {self.host}]"
+        return self._log_id
+
+    @log_id.setter
+    def log_id(self, id: str) -> None:
+        self._log_id = id
 
     @classmethod
     async def get_first_available_gateway(cls, password: str = None):
@@ -324,7 +330,7 @@ class OWNSession:
 
         raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
         resulting_message = OWNSignaling(raw_response.decode())
-        # self._logger.debug("%s Reply: %s", self._gateway.log_id, resulting_message)
+        # self._logger.debug("%s Reply: `%s`", self._gateway.log_id, resulting_message)
 
         if resulting_message.is_nack():
             self._logger.error(
@@ -338,13 +344,17 @@ class OWNSession:
         if resulting_message.is_nack():
             error = True
             error_message = "negotiation_refused"
-            self._logger.debug("%s Reply: %s", self._gateway.log_id, resulting_message)
+            self._logger.debug(
+                "%s Reply: `%s`", self._gateway.log_id, resulting_message
+            )
             self._logger.error(
                 "%s Error while opening %s session.", self._gateway.log_id, self._type
             )
         elif resulting_message.is_sha():
             self._logger.debug(
-                "%s Received SHA challenge: %s", self._gateway.log_id, resulting_message
+                "%s Received SHA challenge: `%s`",
+                self._gateway.log_id,
+                resulting_message,
             )
             if self._gateway.password is None:
                 error = True
@@ -449,7 +459,7 @@ class OWNSession:
                         )
         elif resulting_message.is_nonce():
             self._logger.debug(
-                "%s Received nonce: %s", self._gateway.log_id, resulting_message
+                "%s Received nonce: `%s`", self._gateway.log_id, resulting_message
             )
             if self._gateway.password is not None:
                 hashed_password = f"*#{self._get_own_password(self._gateway.password, resulting_message.nonce)}##"  # pylint: disable=line-too-long
@@ -460,7 +470,7 @@ class OWNSession:
                 await self._stream_writer.drain()
                 raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
                 resulting_message = OWNSignaling(raw_response.decode())
-                # self._logger.debug("%s Reply: %s", self._gateway.log_id, resulting_message)
+                # self._logger.debug("%s Reply: `%s`", self._gateway.log_id, resulting_message)
                 if resulting_message.is_nack():
                     error = True
                     error_message = "password_error"
@@ -484,7 +494,7 @@ class OWNSession:
                     self._type,
                 )
         elif resulting_message.is_ack():
-            # self._logger.debug("%s Reply: %s", self._gateway.log_id, resulting_message)
+            # self._logger.debug("%s Reply: `%s`", self._gateway.log_id, resulting_message)
             self._logger.debug(
                 "%s %s session established.",
                 self._gateway.log_id,
@@ -691,18 +701,18 @@ class OWNCommandSession(OWNSession):
                 resulting_message = OWNSignaling(raw_response.decode())
                 if resulting_message.is_nack():
                     self._logger.error(
-                        "%s Could not send message %s.", self._gateway.log_id, message
+                        "%s Could not send message `%s`.", self._gateway.log_id, message
                     )
                 elif resulting_message.is_ack():
                     if not is_status_request:
                         self._logger.info(
-                            "%s Message %s was successfully sent.",
+                            "%s Message `%s` was successfully sent.",
                             self._gateway.log_id,
                             message,
                         )
                     else:
                         self._logger.debug(
-                            "%s Message %s was successfully sent.",
+                            "%s Message `%s` was successfully sent.",
                             self._gateway.log_id,
                             message,
                         )
@@ -712,19 +722,19 @@ class OWNCommandSession(OWNSession):
             ):
                 if not is_status_request:
                     self._logger.info(
-                        "%s Message %s was successfully sent.",
+                        "%s Message `%s` was successfully sent.",
                         self._gateway.log_id,
                         message,
                     )
                 else:
                     self._logger.debug(
-                        "%s Message %s was successfully sent.",
+                        "%s Message `%s` was successfully sent.",
                         self._gateway.log_id,
                         message,
                     )
             else:
                 self._logger.debug(
-                    "%s Message %s received response %s.",
+                    "%s Message `%s` received response `%s`.",
                     self._gateway.log_id,
                     message,
                     resulting_message,
@@ -733,18 +743,18 @@ class OWNCommandSession(OWNSession):
                 resulting_message = OWNSignaling(raw_response.decode())
                 if resulting_message.is_nack():
                     self._logger.error(
-                        "%s Could not send message %s.", self._gateway.log_id, message
+                        "%s Could not send message `%s`.", self._gateway.log_id, message
                     )
                 elif resulting_message.is_ack():
                     if not is_status_request:
                         self._logger.info(
-                            "%s Message %s was successfully sent.",
+                            "%s Message `%s` was successfully sent.",
                             self._gateway.log_id,
                             message,
                         )
                     else:
                         self._logger.debug(
-                            "%s Message %s was successfully sent.",
+                            "%s Message `%s` was successfully sent.",
                             self._gateway.log_id,
                             message,
                         )

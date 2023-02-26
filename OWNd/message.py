@@ -207,8 +207,10 @@ class OWNMessage:
         """The 'where' parameter corresponding to the bus interface of the subject of this message"""
         return (
             self._where_param[1]
-            if len(self._where_param) > 0 and self._where_param[0] == "4"
-            else ""
+            if self._who in ["1", "2", "15"]
+            and len(self._where_param) > 0
+            and self._where_param[0] == "4"
+            else None
         )
 
     @property
@@ -226,7 +228,7 @@ class OWNMessage:
         """The ID of the subject of this message"""
         return (
             f"{self.who}-{self.where}#4#{self.interface}"
-            if self.interface != ""
+            if self.interface is not None
             else f"{self.who}-{self.where}"
         )
 
@@ -234,6 +236,10 @@ class OWNMessage:
     def human_readable_log(self) -> str:
         """A human readable log of the event"""
         return self._human_readable_log
+
+    @property
+    def _interface_log_text(self) -> str:
+        return f" on interface {self.interface}" if self.interface is not None else ""
 
     @property
     def is_general(self) -> bool:
@@ -376,64 +382,48 @@ class OWNLightingEvent(OWNEvent):
             self._state = self._what
 
             if self._state == 0:  # Light off
-                self._human_readable_log = f"Light {self._where} is switched off."
+                self._human_readable_log = (
+                    f"Light {self._where}{self._interface_log_text} is switched off."
+                )
             elif self._state == 1:  # Light on
-                self._human_readable_log = f"Light {self._where} is switched on."
+                self._human_readable_log = (
+                    f"Light {self._where}{self._interface_log_text} is switched on."
+                )
             elif self._state > 1 and self._state < 11:  # Light dimmed to preset value
                 self._brightness_preset = self._state
                 # self._brightness = self._state * 10
-                self._human_readable_log = f"Light {self._where} is switched on at brightness level {self._state}."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on at brightness level {self._state}."  # pylint: disable=line-too-long
             elif self._state == 11:  # Timer at 1m
                 self._timer = 60
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state == 12:  # Timer at 2m
                 self._timer = 120
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state == 13:  # Timer at 3m
                 self._timer = 180
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state == 14:  # Timer at 4m
                 self._timer = 240
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state == 15:  # Timer at 5m
                 self._timer = 300
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state == 16:  # Timer at 15m
                 self._timer = 900
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state == 17:  # Timer at 30s
                 self._timer = 30
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state == 18:  # Timer at 0.5s
                 self._timer = 0.5
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._state >= 20 and self._state <= 29:  # Light blinking
                 self._blinker = 0.5 * (self._state - 19)
-                self._human_readable_log = (
-                    f"Light {self._where} is blinking every {self._blinker}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is blinking every {self._blinker}s."
             elif self._state == 34:  # Motion detected
                 self._type = MESSAGE_TYPE_MOTION
                 self._motion = True
-                self._human_readable_log = (
-                    f"Light/motion sensor {self._where} detected motion"
-                )
+                self._human_readable_log = f"Light/motion sensor {self._where}{self._interface_log_text} detected motion"
 
         if self._dimension is not None:
             if self._dimension == 1 or self._dimension == 4:  # Brightness value
@@ -441,29 +431,25 @@ class OWNLightingEvent(OWNEvent):
                 self._transition = int(self._dimension_value[1])
                 if self._brightness == 0:
                     self._state = 0
-                    self._human_readable_log = f"Light {self._where} is switched off."
+                    self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched off."
                 else:
                     self._state = 1
-                    self._human_readable_log = (
-                        f"Light {self._where} is switched on at {self._brightness}%."
-                    )
+                    self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on at {self._brightness}%."
             elif self._dimension == 2:  # Time value
                 self._timer = (
                     int(self._dimension_value[0]) * 3600
                     + int(self._dimension_value[1]) * 60
                     + int(self._dimension_value[2])
                 )
-                self._human_readable_log = (
-                    f"Light {self._where} is switched on for {self._timer}s."
-                )
+                self._human_readable_log = f"Light {self._where}{self._interface_log_text} is switched on for {self._timer}s."
             elif self._dimension == 5:  # PIR sensitivity
                 self._type = MESSAGE_TYPE_PIR_SENSITIVITY
                 self._pir_sensitivity = int(self._dimension_value[0])
-                self._human_readable_log = f"Light/motion sensor {self._where} PIR sesitivity is {PIR_SENSITIVITY_MAPPING[self._pir_sensitivity]}."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Light/motion sensor {self._where}{self._interface_log_text} PIR sesitivity is {PIR_SENSITIVITY_MAPPING[self._pir_sensitivity]}."  # pylint: disable=line-too-long
             elif self._dimension == 6:  # Illuminance value
                 self._type = MESSAGE_TYPE_ILLUMINANCE
                 self._illuminance = int(self._dimension_value[0])
-                self._human_readable_log = f"Light/motion sensor {self._where} detected an illuminance value of {self._illuminance} lx."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Light/motion sensor {self._where}{self._interface_log_text} detected an illuminance value of {self._illuminance} lx."  # pylint: disable=line-too-long
             elif self._dimension == 7:  # Motion timeout value
                 self._type = MESSAGE_TYPE_MOTION_TIMEOUT
                 self._motion_timeout = datetime.timedelta(
@@ -471,7 +457,7 @@ class OWNLightingEvent(OWNEvent):
                     minutes=int(self._dimension_value[1]),
                     seconds=int(self._dimension_value[2]),
                 )
-                self._human_readable_log = f"Light/motion sensor {self._where} has timeout set to {self._motion_timeout}."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Light/motion sensor {self._where}{self._interface_log_text} has timeout set to {self._motion_timeout}."  # pylint: disable=line-too-long
 
     @property
     def message_type(self):
@@ -541,36 +527,42 @@ class OWNAutomationEvent(OWNEvent):
                 self._info = int(self._dimension_value[3])
 
         if self._state == 0:
-            self._human_readable_log = f"Cover {self._where} stopped."
+            self._human_readable_log = (
+                f"Cover {self._where}{self._interface_log_text} stopped."
+            )
             self._is_opening = False
             self._is_closing = False
         elif self._state == 10:
             self._is_opening = False
             self._is_closing = False
             if self._position == 0:
-                self._human_readable_log = f"Cover {self._where} is closed."
+                self._human_readable_log = (
+                    f"Cover {self._where}{self._interface_log_text} is closed."
+                )
                 self._is_closed = True
             else:
-                self._human_readable_log = (
-                    f"Cover {self._where} is opened at {self._position}%."
-                )
+                self._human_readable_log = f"Cover {self._where}{self._interface_log_text} is opened at {self._position}%."
                 self._is_closed = False
         else:
             if self._state == 1:
-                self._human_readable_log = f"Cover {self._where} is opening."
+                self._human_readable_log = (
+                    f"Cover {self._where}{self._interface_log_text} is opening."
+                )
                 self._is_opening = True
                 self._is_closing = False
             elif self._state == 11 or self._state == 13:
-                self._human_readable_log = f"Cover {self._where} is opening from initial position {self._position}."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Cover {self._where}{self._interface_log_text} is opening from initial position {self._position}."  # pylint: disable=line-too-long
                 self._is_opening = True
                 self._is_closing = False
                 self._is_closed = False
             elif self._state == 2:
-                self._human_readable_log = f"Cover {self._where} is closing."
+                self._human_readable_log = (
+                    f"Cover {self._where}{self._interface_log_text} is closing."
+                )
                 self._is_closing = True
                 self._is_opening = False
             elif self._state == 12 or self._state == 14:
-                self._human_readable_log = f"Cover {self._where} is closing from initial position {self._position}."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Cover {self._where}{self._interface_log_text} is closing from initial position {self._position}."  # pylint: disable=line-too-long
                 self._is_closing = True
                 self._is_opening = False
                 self._is_closed = False
@@ -1251,13 +1243,13 @@ class OWNCENEvent(OWNEvent):
         self.object = self._where
 
         if self._state is None:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been pressed."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} has been pressed."  # pylint: disable=line-too-long
         elif int(self._state) == 3:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} is being held pressed."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} is being held pressed."  # pylint: disable=line-too-long
         elif int(self._state) == 1:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been released after a short press."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} has been released after a short press."  # pylint: disable=line-too-long
         elif int(self._state) == 2:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been released after a long press."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} has been released after a long press."  # pylint: disable=line-too-long
 
     @property
     def is_pressed(self):
@@ -1628,37 +1620,31 @@ class OWNLightingCommand(OWNCommand):
     @classmethod
     def status(cls, where):
         message = cls(f"*#1*{where}##")
-        message._human_readable_log = f"Requesting light or switch {where} status."
+        message._human_readable_log = f"Requesting light or switch {message._where}{message._interface_log_text} status."
         return message
 
     @classmethod
     def get_brightness(cls, where):
         message = cls(f"*#1*{where}*1##")
-        message._human_readable_log = f"Requesting light {where} brightness."
+        message._human_readable_log = f"Requesting light {message._where}{message._interface_log_text} brightness."
         return message
 
     @classmethod
     def get_pir_sensitivity(cls, where):
         message = cls(f"*#1*{where}*5##")
-        message._human_readable_log = (
-            f"Requesting light/motion sensor {where} PIR sensitivity."
-        )
+        message._human_readable_log = f"Requesting light/motion sensor {message._where}{message._interface_log_text} PIR sensitivity."
         return message
 
     @classmethod
     def get_illuminance(cls, where):
         message = cls(f"*#1*{where}*6##")
-        message._human_readable_log = (
-            f"Requesting light/motion sensor {where} illuminance."
-        )
+        message._human_readable_log = f"Requesting light/motion sensor {message._where}{message._interface_log_text} illuminance."
         return message
 
     @classmethod
     def get_motion_timeout(cls, where):
         message = cls(f"*#1*{where}*7##")
-        message._human_readable_log = (
-            f"Requesting light/motion sensor {where} motion timeout."
-        )
+        message._human_readable_log = f"Requesting light/motion sensor {message._where}{message._interface_log_text} motion timeout."
         return message
 
     @classmethod
@@ -1669,31 +1655,27 @@ class OWNLightingCommand(OWNCommand):
             _freqency = 0.5
         _what = int((_freqency / 0.5) + 19)
         message = cls(f"*1*{_what}*{where}##")
-        message._human_readable_log = f"Flashing light {where} every {_freqency}s."
+        message._human_readable_log = f"Flashing light {message._where}{message._interface_log_text} every {_freqency}s."
         return message
 
     @classmethod
     def switch_on(cls, where, _transition=None):
         if _transition is not None and _transition >= 0 and _transition <= 255:
             message = cls(f"*1*1#{_transition}*{where}##")
-            message._human_readable_log = (
-                f"Switching ON light {where} with transition speed {_transition}."
-            )
+            message._human_readable_log = f"Switching ON light {message._where}{message._interface_log_text} with transition speed {_transition}."
         else:
             message = cls(f"*1*1*{where}##")
-            message._human_readable_log = f"Switching ON light or switch {where}."
+            message._human_readable_log = f"Switching ON light or switch {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
     def switch_off(cls, where, _transition=None):
         if _transition is not None and _transition >= 0 and _transition <= 255:
             message = cls(f"*1*0#{_transition}*{where}##")
-            message._human_readable_log = (
-                f"Switching OFF light {where} with transition speed {_transition}."
-            )
+            message._human_readable_log = f"Switching OFF light {message._where}{message._interface_log_text} with transition speed {_transition}."
         else:
             message = cls(f"*1*0*{where}##")
-            message._human_readable_log = f"Switching OFF light or switch {where}."
+            message._human_readable_log = f"Switching OFF light or switch {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
@@ -1702,9 +1684,9 @@ class OWNLightingCommand(OWNCommand):
         transition_speed = _transition if _transition >= 0 and _transition <= 255 else 0
         message = cls(f"*#1*{where}*#1*{command_level}*{transition_speed}##")
         message._human_readable_log = (
-            f"Setting light {where} brightness to {_level}% with transition speed {transition_speed}."  # pylint: disable=line-too-long
+            f"Setting light {message._where}{message._interface_log_text} brightness to {_level}% with transition speed {transition_speed}."  # pylint: disable=line-too-long
             if transition_speed > 0
-            else f"Setting light {where} brightness to {_level}%."
+            else f"Setting light {message._where}{message._interface_log_text} brightness to {_level}%."
         )
         return message
 
@@ -1713,31 +1695,39 @@ class OWNAutomationCommand(OWNCommand):
     @classmethod
     def status(cls, where):
         message = cls(f"*#2*{where}##")
-        message._human_readable_log = f"Requesting shutter {where} status."
+        message._human_readable_log = (
+            f"Requesting shutter {message._where}{message._interface_log_text} status."
+        )
         return message
 
     @classmethod
     def raise_shutter(cls, where):
         message = cls(f"*2*1*{where}##")
-        message._human_readable_log = f"Raising shutter {where}."
+        message._human_readable_log = (
+            f"Raising shutter {message._where}{message._interface_log_text}."
+        )
         return message
 
     @classmethod
     def lower_shutter(cls, where):
         message = cls(f"*2*2*{where}##")
-        message._human_readable_log = f"Lowering shutter {where}."
+        message._human_readable_log = (
+            f"Lowering shutter {message._where}{message._interface_log_text}."
+        )
         return message
 
     @classmethod
     def stop_shutter(cls, where):
         message = cls(f"*2*0*{where}##")
-        message._human_readable_log = f"Stoping shutter {where}."
+        message._human_readable_log = (
+            f"Stoping shutter {message._where}{message._interface_log_text}."
+        )
         return message
 
     @classmethod
     def set_shutter_level(cls, where, level=30):
         message = cls(f"*#2*{where}*#11#001*{level}##")
-        message._human_readable_log = f"Setting shutter {where} position to {level}%."
+        message._human_readable_log = f"Setting shutter {message._where}{message._interface_log_text} position to {level}%."
         return message
 
 
@@ -1745,13 +1735,13 @@ class OWNHeatingCommand(OWNCommand):
     @classmethod
     def status(cls, where):
         message = cls(f"*#4*{where}##")
-        message._human_readable_log = f"Requesting climate status update for {where}."
+        message._human_readable_log = f"Requesting climate status update for {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
     def get_temperature(cls, where):
         message = cls(f"*#4*{where}*0##")
-        message._human_readable_log = f"Requesting climate status update for {where}."
+        message._human_readable_log = f"Requesting climate status update for {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
