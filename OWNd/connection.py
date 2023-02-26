@@ -646,7 +646,9 @@ class OWNEventSession(OWNSession):
         It will read one frame and return it as an OWNMessage object"""
         try:
             data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-            return OWNMessage.parse(data.decode())
+            _decoded_data = data.decode()
+            _message = OWNMessage.parse(_decoded_data)
+            return _message if _message else _decoded_data
         except asyncio.IncompleteReadError:
             self._logger.warning(
                 "%s Connection interrupted, reconnecting...", self._gateway.log_id
