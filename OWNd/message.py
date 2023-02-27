@@ -1135,7 +1135,7 @@ class OWNGatewayEvent(OWNEvent):
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
             # Timezone is sometimes missing from messages, assuming UTC
-            if self._dimension_value[3] is not None:
+            if self._dimension_value[3] != "":
                 self._timezone = (
                     f"+{self._dimension_value[3][1:]}:00"
                     if self._dimension_value[3][0] == "0"
@@ -1207,7 +1207,7 @@ class OWNGatewayEvent(OWNEvent):
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
             # Timezone is sometimes missing from messages, assuming UTC
-            if self._dimension_value[3] is not None:
+            if self._dimension_value[3] != "":
                 self._timezone = (
                     f"+{self._dimension_value[3][1:]}:00"
                     if self._dimension_value[3][0] == "0"
@@ -1865,7 +1865,7 @@ class OWNGatewayCommand(OWNCommand):
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
             # Timezone is sometimes missing from messages, assuming UTC
-            if self._dimension_value[3] is not None:
+            if self._dimension_value[3] != "":
                 self._timezone = (
                     f"+{self._dimension_value[3][1:]}:00"
                     if self._dimension_value[3][0] == "0"
@@ -1896,7 +1896,7 @@ class OWNGatewayCommand(OWNCommand):
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
             # Timezone is sometimes missing from messages, assuming UTC
-            if self._dimension_value[3] is not None:
+            if self._dimension_value[3] != "":
                 self._timezone = (
                     f"+{self._dimension_value[3][1:]}:00"
                     if self._dimension_value[3][0] == "0"
