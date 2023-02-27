@@ -49,13 +49,13 @@ class OWNMessage:
         r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)(?P<where_param>(?:#\d+)*)##$"
     )  #  *#WHO*WHERE
     _DIMENSION_WRITING = re.compile(
-        r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$"  # pylint: disable=line-too-long
+        r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d*)+)##$"  # pylint: disable=line-too-long
     )  #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
     _DIMENSION_REQUEST = re.compile(
         r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$"
     )  #  *#WHO*WHERE*DIMENSION##
     _DIMENSION_REQUEST_REPLY = re.compile(
-        r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$"  # pylint: disable=line-too-long
+        r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d*)+)##$"  # pylint: disable=line-too-long
     )  #  *#WHO*WHERE*DIMENSION*VAL1*VALn##
 
     """ Base class for all OWN messages """
@@ -341,6 +341,8 @@ class OWNEvent(OWNMessage):
                     return OWNCENPlusEvent(data)
                 elif _where.startswith("3"):
                     return OWNDryContactEvent(data)
+            elif _who > 1000:
+                return cls(data)
 
         return data
 
@@ -1132,14 +1134,15 @@ class OWNGatewayEvent(OWNEvent):
             self._hour = self._dimension_value[0]
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
-            self._timezone = (
-                f"+{self._dimension_value[3][1:]}"
-                if self._dimension_value[3][0] == "0"
-                else f"-{self._dimension_value[3][1:]}"
-            )
-            self._time = datetime.time.fromisoformat(
-                f"{self._hour}:{self._minute}:{self._second}{self._timezone}:00"
-            )
+            # Timezone is sometimes missing from messages, assuming UTC
+            if self._dimension_value[3] is not None:
+                self._timezone = (
+                    f"+{self._dimension_value[3][1:]}:00"
+                    if self._dimension_value[3][0] == "0"
+                    else f"-{self._dimension_value[3][1:]}:00"
+                )
+            else:
+                self._timezone = ""
             self._human_readable_log = f"Gateway's internal time is: {self._hour}:{self._minute}:{self._second} UTC {self._timezone}."  # pylint: disable=line-too-long
 
         elif self._dimension == 1:
@@ -1203,16 +1206,20 @@ class OWNGatewayEvent(OWNEvent):
             self._hour = self._dimension_value[0]
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
-            self._timezone = (
-                f"+{self._dimension_value[3][1:]}"
-                if self._dimension_value[3][0] == "0"
-                else f"-{self._dimension_value[3][1:]}"
-            )
+            # Timezone is sometimes missing from messages, assuming UTC
+            if self._dimension_value[3] is not None:
+                self._timezone = (
+                    f"+{self._dimension_value[3][1:]}:00"
+                    if self._dimension_value[3][0] == "0"
+                    else f"-{self._dimension_value[3][1:]}:00"
+                )
+            else:
+                self._timezone = ""
             self._day = self._dimension_value[5]
             self._month = self._dimension_value[6]
             self._year = self._dimension_value[7]
             self._datetime = datetime.datetime.fromisoformat(
-                f"{self._year}-{self._month}-{self._day}*{self._hour}:{self._minute}:{self._second}{self._timezone}:00"  # pylint: disable=line-too-long
+                f"{self._year}-{self._month}-{self._day}*{self._hour}:{self._minute}:{self._second}{self._timezone}"  # pylint: disable=line-too-long
             )
             self._human_readable_log = (
                 f"Gateway's internal datetime is: {self._datetime}."
@@ -1612,6 +1619,8 @@ class OWNCommand(OWNMessage):
                     return cls(data)
                 elif _where.startswith("3"):
                     return OWNDryContactCommand(data)
+            elif _who > 1000:
+                return cls(data)
 
         return None
 
@@ -1855,13 +1864,17 @@ class OWNGatewayCommand(OWNCommand):
             self._hour = self._dimension_value[0]
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
-            self._timezone = (
-                f"+{self._dimension_value[3][1:]}"
-                if self._dimension_value[3][0] == "0"
-                else f"-{self._dimension_value[3][1:]}"
-            )
+            # Timezone is sometimes missing from messages, assuming UTC
+            if self._dimension_value[3] is not None:
+                self._timezone = (
+                    f"+{self._dimension_value[3][1:]}:00"
+                    if self._dimension_value[3][0] == "0"
+                    else f"-{self._dimension_value[3][1:]}:00"
+                )
+            else:
+                self._timezone = ""
             self._time = datetime.time.fromisoformat(
-                f"{self._hour}:{self._minute}:{self._second}{self._timezone}:00"
+                f"{self._hour}:{self._minute}:{self._second}{self._timezone}"
             )
             self._human_readable_log = (
                 f"Gateway broadcasting internal time: {self._time}."
@@ -1882,16 +1895,20 @@ class OWNGatewayCommand(OWNCommand):
             self._hour = self._dimension_value[0]
             self._minute = self._dimension_value[1]
             self._second = self._dimension_value[2]
-            self._timezone = (
-                f"+{self._dimension_value[3][1:]}"
-                if self._dimension_value[3][0] == "0"
-                else f"-{self._dimension_value[3][1:]}"
-            )
+            # Timezone is sometimes missing from messages, assuming UTC
+            if self._dimension_value[3] is not None:
+                self._timezone = (
+                    f"+{self._dimension_value[3][1:]}:00"
+                    if self._dimension_value[3][0] == "0"
+                    else f"-{self._dimension_value[3][1:]}:00"
+                )
+            else:
+                self._timezone = ""
             self._day = self._dimension_value[5]
             self._month = self._dimension_value[6]
             self._year = self._dimension_value[7]
             self._datetime = datetime.datetime.fromisoformat(
-                f"{self._year}-{self._month}-{self._day}*{self._hour}:{self._minute}:{self._second}{self._timezone}:00"  # pylint: disable=line-too-long
+                f"{self._year}-{self._month}-{self._day}*{self._hour}:{self._minute}:{self._second}{self._timezone}"  # pylint: disable=line-too-long
             )
             self._human_readable_log = (
                 f"Gateway broadcasting internal datetime: {self._datetime}."
