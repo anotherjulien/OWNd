@@ -72,7 +72,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = self._STATUS.match(self._raw)
             self._family = "EVENT"
-            self._type = "STATUS"
+            self._message_type = "STATUS"
             self._who = int(self._match.group("who"))
             self._what = int(self._match.group("what"))
             if self._what == 1000:
@@ -90,7 +90,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = self._STATUS_REQUEST.match(self._raw)
             self._family = "REQUEST"
-            self._type = "STATUS_REQUEST"
+            self._message_type = "STATUS_REQUEST"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -105,7 +105,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = self._DIMENSION_REQUEST.match(self._raw)
             self._family = "REQUEST"
-            self._type = "DIMENSION_REQUEST"
+            self._message_type = "DIMENSION_REQUEST"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -120,7 +120,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = self._DIMENSION_REQUEST_REPLY.match(self._raw)
             self._family = "EVENT"
-            self._type = "DIMENSION_REQUEST_REPLY"
+            self._message_type = "DIMENSION_REQUEST_REPLY"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -137,7 +137,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = self._DIMENSION_WRITING.match(self._raw)
             self._family = "COMMAND"
-            self._type = "DIMENSION_WRITING"
+            self._message_type = "DIMENSION_WRITING"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -231,6 +231,35 @@ class OWNMessage:
             if self.interface is not None
             else f"{self.who}-{self.where}"
         )
+
+    @property
+    def event_content(self) -> dict:
+        _event = {
+            "message": self._raw,
+            "family": self._family.replace("_", " ").capitalize(),
+            "type": self._message_type.replace("_", " ").capitalize(),
+            "who": self._who,
+        }
+        if self._where:
+            _event.update({"where": self._where})
+        if self.interface:
+            _event.update({"interface": self.interface})
+            if self._where_param and len(self._where_param) > 2:
+                _event.update({"where parameters": self._where_param[2:]})
+        elif self._where_param:
+            _event.update({"where parameters": self._where_param})
+        if self._what:
+            _event.update({"what": self._what})
+        if self._what_param:
+            _event.update({"what parameters": self._what_param})
+        if self._dimension:
+            _event.update({"dimension": self._dimension})
+        if self._dimension_param:
+            _event.update({"dimension parameters": self._dimension_param})
+        if self._dimension_value:
+            _event.update({"dimension values": self._dimension_value})
+
+        return _event
 
     @property
     def human_readable_log(self) -> str:
