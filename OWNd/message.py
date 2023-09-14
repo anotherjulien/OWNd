@@ -772,9 +772,9 @@ class OWNHeatingEvent(OWNEvent):
             ):
                 self._local_offset = 0
             elif self._dimension_value[0].startswith("0"):
-                self._local_offset = int(f"+{self._dimension_value[0][1:]}")
+                self._local_offset = int(f"{self._dimension_value[0][1:]}")
             else:
-                self._local_offset = int(f"-{self._dimension_value[0][1:]}")
+                self._local_offset = -int(f"{self._dimension_value[0][1:]}")
             self._human_readable_log = (
                 f"Zone {self._zone}'s local offset is set to {self._local_offset}°C."
             )
