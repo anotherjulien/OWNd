@@ -37,6 +37,7 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
         else None
     )
 
+    logger.info("Starting discovery of a supported gateway via SSDP")
     gateway = await OWNGateway.build_from_discovery_info(
         {
             "address": address,
@@ -50,8 +51,10 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
     if logger is not None:
         connection.logger = logger
 
+    logger.info("Starting connection to the discovered gateway")
     await connection.connect()
 
+    logger.info("Now waiting for events from the gateway (e.g. a cover opening/closing)")
     while True:
         message = await connection.get_next()
         if message:
@@ -114,7 +117,7 @@ if __name__ == "__main__":
     # add the handlers to the logger
     _logger.addHandler(log_stream_handler)
 
-    event_session = OWNEventSession()
+    event_session = OWNEventSession(gateway=None, logger=_logger)
     _arguments = {
         "address": args.address,
         "port": args.port,
