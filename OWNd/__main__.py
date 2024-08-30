@@ -5,6 +5,8 @@ import argparse
 import asyncio
 import logging
 
+from OWNd.message import OWNMessage
+
 from .connection import OWNEventSession, OWNGateway
 
 
@@ -56,7 +58,7 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
         message = await connection.get_next()
         if message:
             logger.debug("Received: %s", message)
-            if message.is_event:
+            if isinstance(message, OWNMessage) and message.is_event:
                 logger.info(message.human_readable_log)
 
 

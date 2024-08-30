@@ -1,7 +1,11 @@
 """ This module contains OpenWebNet messages definition """  # pylint: disable=too-many-lines
 
+from __future__ import annotations
+
 import datetime
 import re
+from typing import Optional
+
 from dateutil.relativedelta import relativedelta
 import pytz
 
@@ -151,7 +155,7 @@ class OWNMessage:
             del self._dimension_value[0]
 
     @classmethod
-    def parse(cls, data):
+    def parse(cls, data) -> Optional[OWNMessage]:
         if (
             cls._ACK.match(data)
             or cls._NACK.match(data)
@@ -338,7 +342,7 @@ class OWNEvent(OWNMessage):
     """
 
     @classmethod
-    def parse(cls, data):
+    def parse(cls, data) -> Optional[OWNEvent]:
         _match = re.match(r"^\*#?(?P<who>\d+)\*.+##$", data)
 
         if _match:
@@ -373,7 +377,7 @@ class OWNEvent(OWNMessage):
             elif _who > 1000:
                 return cls(data)
 
-        return data
+        return None
 
 
 class OWNScenarioEvent(OWNEvent):
@@ -1602,7 +1606,7 @@ class OWNCommand(OWNMessage):
     """
 
     @classmethod
-    def parse(cls, data):
+    def parse(cls, data) -> Optional[OWNCommand]:
         _match = re.match(r"^\*#?(?P<who>\d+)\*.+##$", data)
 
         if _match:
