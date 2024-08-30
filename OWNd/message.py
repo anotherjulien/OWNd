@@ -769,6 +769,9 @@ class OWNHeatingEvent(OWNEvent):
                 or self._dimension_value[0] == "00"
                 or self._dimension_value[0] == "4"
                 or self._dimension_value[0] == "5"
+                or self._dimension_value[0] == "6"
+                or self._dimension_value[0] == "7"
+                or self._dimension_value[0] == "8"
             ):
                 self._local_offset = 0
             elif self._dimension_value[0].startswith("0"):
