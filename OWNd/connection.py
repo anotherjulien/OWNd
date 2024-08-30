@@ -6,6 +6,7 @@ import hashlib
 import string
 import random
 import logging
+from typing import Union
 from urllib.parse import urlparse
 
 from .discovery import find_gateways, get_gateway, get_port
