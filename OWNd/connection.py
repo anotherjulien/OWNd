@@ -10,7 +10,8 @@ from urllib.parse import urlparse
 
 from .exceptions import *
 from .discovery import find_gateways, get_gateway, get_port
-from .message import OWNMessage, OWNSignaling
+from .message_parser import parse
+from .messages.base_message import OWNMessage, OWNSignaling
 
 
 class OWNGateway:
@@ -111,11 +112,11 @@ class OWNGateway:
         return cls(local_gateways[0])
 
     @classmethod
-    async def find_from_address(cls, address: str):
+    async def find_from_address(cls, address: str, password: str = None):
         if address is not None:
-            return cls(await get_gateway(address))
+            return cls(await get_gateway(address=address, password=password))
         else:
-            return await cls.get_first_available_gateway()
+            return await cls.get_first_available_gateway(password=password)
 
     @classmethod
     async def build_from_discovery_info(cls, discovery_info: dict):
@@ -136,7 +137,7 @@ class OWNGateway:
             ):
                 discovery_info["port"] = await get_port(discovery_info["ssdp_location"])
             elif "address" in discovery_info and discovery_info["address"] is not None:
-                return await cls.find_from_address(discovery_info["address"])
+                return await cls.find_from_address(address=discovery_info["address"], password=discovery_info["password"] if "password" in discovery_info else None)
             else:
                 return await cls.get_first_available_gateway(
                     password=discovery_info["password"]
@@ -558,7 +559,7 @@ class OWNEventSession(OWNSession):
         It will read one frame and return it as an OWNMessage object"""
         try:
             data = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-            return OWNMessage.parse(data.decode())
+            return parse(data.decode())
         except asyncio.IncompleteReadError:
             self._logger.warning("Connection interrupted, reconnecting...")
             await self.connect()
@@ -606,7 +607,7 @@ class OWNCommandSession(OWNSession):
                 self._logger.warning(">\t%s", message)
 
             raw_response = await self._stream_reader.readuntil(OWNSession.SEPARATOR)
-            resulting_message = OWNMessage.parse(raw_response.decode())
+            resulting_message = parse(raw_response.decode())
             if (
                 isinstance(resulting_message, OWNSignaling)
                 and resulting_message.is_nack()

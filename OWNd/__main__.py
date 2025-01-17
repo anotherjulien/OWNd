@@ -12,7 +12,7 @@ from .exceptions import (
     OWNNACKException,
 )
 from .connection import OWNEventSession, OWNCommandSession, OWNGateway
-from .message import OWNMessage, OWNEvent
+from .messages.base_message import OWNMessage, OWNEvent
 
 
 async def main(arguments: dict, connection: OWNEventSession) -> None:

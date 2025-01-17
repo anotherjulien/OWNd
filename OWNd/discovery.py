@@ -317,10 +317,11 @@ async def find_gateways() -> list:
     return return_list
 
 
-async def get_gateway(address: str) -> dict:
+async def get_gateway(address: str, password: str = None) -> dict:
     _local_gateways = await find_gateways()
     for _gateway in _local_gateways:
         if _gateway["address"] == address:
+            if password is not None: _gateway["password"] = password
             return _gateway
 
 
