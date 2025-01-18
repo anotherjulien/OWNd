@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ PyPi setup file for OWNd. """
 
 import setuptools

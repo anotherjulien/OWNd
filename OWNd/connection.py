@@ -172,18 +172,21 @@ class OWNSession:
     ):
         """Initialize the class
         Arguments:
+        gateway: OpenWebNet gateway instance
+        connection_type: used when logging to identify this session
         logger: instance of logging
-        address: IP address of the OpenWebNet gateway
-        port: TCP port for the connection
-        password: OpenWebNet password
         """
 
         self._gateway = gateway
         self._type = connection_type.lower()
         self._logger = logger
 
+        # annotations for stream reader/writer:
         self._stream_reader: asyncio.StreamReader
         self._stream_writer: asyncio.StreamWriter
+        # init them to None:
+        self._stream_reader = None
+        self._stream_writer = None
 
     @property
     def gateway(self) -> OWNGateway:
@@ -193,13 +196,13 @@ class OWNSession:
     def gateway(self, gateway: OWNGateway) -> None:
         self._gateway = gateway
 
-    @property
-    def password(self) -> str:
-        return str(self._password)
-
-    @password.setter
-    def password(self, password: str) -> None:
-        self._password = password
+    # password is a property inside OWNGateway... right?
+    #@property
+    #def password(self) -> str:
+    #    return str(self._password)
+    #@password.setter
+    #def password(self, password: str) -> None:
+    #    self._password = password
 
     @property
     def logger(self) -> logging.Logger:
@@ -310,11 +313,15 @@ class OWNSession:
 
     async def close(self) -> None:
         """Closes the connection to the OpenWebNet gateway"""
-        self._stream_writer.close()
-        await self._stream_writer.wait_closed()
-        self._logger.debug(
-            "%s %s session closed.", self._gateway.log_id, self._type.capitalize()
-        )
+
+        # this method may be invoked on an empty instance of OWNSession, so be robust against Nones:
+        if self._stream_writer is not None:
+            self._stream_writer.close()
+            await self._stream_writer.wait_closed()
+        if self._gateway is not None:
+            self._logger.debug(
+                "%s %s session closed.", self._gateway.log_id, self._type.capitalize()
+            )
 
     async def _negotiate(self) -> dict:
         type_id = 0 if self._type == "command" else 1
@@ -427,6 +434,9 @@ class OWNSession:
                                 # )
                                 self._stream_writer.write("*#*1##".encode())
                                 await self._stream_writer.drain()
+                                self._logger.debug(
+                                    "%s Session established successfully.", self._gateway.log_id
+                                )
                             else:
                                 self._logger.error(
                                     "%s Server identity could not be confirmed.",
@@ -481,7 +491,7 @@ class OWNSession:
                     )
                 elif resulting_message.is_ack():
                     self._logger.debug(
-                        "%s %s session established.",
+                        "%s %s session established successfully.",
                         self._gateway.log_id,
                         self._type.capitalize(),
                     )
@@ -496,7 +506,7 @@ class OWNSession:
         elif resulting_message.is_ack():
             # self._logger.debug("%s Reply: `%s`", self._gateway.log_id, resulting_message)
             self._logger.debug(
-                "%s %s session established.",
+                "%s %s session established successfully.",
                 self._gateway.log_id,
                 self._type.capitalize(),
             )
