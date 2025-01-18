@@ -6,6 +6,7 @@ import hashlib
 import string
 import random
 import logging
+from typing import Union
 from urllib.parse import urlparse
 
 from .discovery import find_gateways, get_gateway, get_port
@@ -651,7 +652,7 @@ class OWNEventSession(OWNSession):
         connection = cls(gateway)
         await connection.connect()
 
-    async def get_next(self):
+    async def get_next(self) -> Union[OWNMessage, str, None]:
         """Acts as an entry point to read messages on the event bus.
         It will read one frame and return it as an OWNMessage object"""
         try:
