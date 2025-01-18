@@ -5,7 +5,7 @@ import argparse
 import asyncio
 import logging
 
-from OWNd.message import OWNMessage
+from .message import OWNMessage
 
 from .connection import OWNEventSession, OWNGateway
 
