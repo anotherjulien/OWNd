@@ -374,6 +374,7 @@ class OWNSession:
                 self._stream_writer.write("*#*0##".encode())
                 await self._stream_writer.drain()
             else:
+                method = "sha"
                 if resulting_message.is_sha_1():
                     # self._logger.debug("%s Detected SHA-1 method.", self._gateway.log_id)
                     method = "sha1"
