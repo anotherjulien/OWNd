@@ -12,7 +12,7 @@ from .exceptions import (
     OWNNACKException,
 )
 from .connection import OWNEventSession, OWNCommandSession, OWNGateway
-from .messages.base_message import OWNMessage, OWNEvent
+from .messages.base_message import OWNMessage
 
 
 async def main(arguments: dict, connection: OWNEventSession) -> None:
@@ -45,6 +45,7 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
     )
     logging_mode = arguments["logging_mode"] if "logging_mode" in arguments else False
 
+    logger.info("Starting discovery of a supported gateway via SSDP")
     gateway = await OWNGateway.build_from_discovery_info(
         {
             "address": address,
@@ -84,8 +85,10 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
     if logger is not None:
         connection.logger = logger
 
+    logger.info("Starting connection to the discovered gateway")
     await connection.connect()
 
+    logger.info("Now waiting for events from the gateway (e.g. a cover opening/closing)")
     while True:
         message = await connection.get_next()
         if (
@@ -124,7 +127,7 @@ async def main(arguments: dict, connection: OWNEventSession) -> None:
         ):
             if not logging_mode:
                 logger.debug("Received: %s", message)
-                if message.is_event:
+                if (isinstance(message, OWNMessage) and message.is_event):
                     logger.info(message.human_readable_log)
             else:
                 logger.warning(message)
@@ -160,6 +163,7 @@ async def send(arguments: dict, connection: OWNCommandSession) -> None:
     )
     messages = arguments["messages"] if "messages" in arguments else []
 
+    logger.info("Starting discovery of a supported gateway via SSDP")
     gateway = await OWNGateway.build_from_discovery_info(
         {
             "address": address,
@@ -173,6 +177,7 @@ async def send(arguments: dict, connection: OWNCommandSession) -> None:
     if logger is not None:
         connection.logger = logger
 
+    logger.info("Starting connection to the discovered gateway")
     await connection.connect()
 
     for message in messages:

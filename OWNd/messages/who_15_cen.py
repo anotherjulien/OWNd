@@ -15,13 +15,13 @@ class OWNCENEvent(OWNEvent):
         self.object = self._where
 
         if self._state is None:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been pressed."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} has been pressed."  # pylint: disable=line-too-long
         elif int(self._state) == 3:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} is being held pressed."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} is being held pressed."  # pylint: disable=line-too-long
         elif int(self._state) == 1:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been released after a short press."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} has been released after a short press."  # pylint: disable=line-too-long
         elif int(self._state) == 2:
-            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object} has been released after a long press."  # pylint: disable=line-too-long
+            self._human_readable_log = f"Button {self.push_button} of CEN object {self.object}{self._interface_log_text} has been released after a long press."  # pylint: disable=line-too-long
 
     @property
     def is_pressed(self):

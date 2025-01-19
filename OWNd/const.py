@@ -20,13 +20,13 @@ PATTERN_STATUS_REQUEST = re.compile(
 )  #  *#WHO*WHERE
 ## Dimension messages
 PATTERN_DIMENSION_WRITING = re.compile(
-    r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$"  # pylint: disable=line-too-long
+    r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*#(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d*)+)##$"  # pylint: disable=line-too-long
 )  #  *#WHO*WHERE*#DIMENSION*VAL1*VALn##
 PATTERN_DIMENSION_REQUEST = re.compile(
     r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)##$"
 )  #  *#WHO*WHERE*DIMENSION##
 PATTERN_DIMENSION_REQUEST_REPLY = re.compile(
-    r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d+)+)##$"  # pylint: disable=line-too-long
+    r"^\*#(?P<who>\d+)\*(?P<where>#?\d+)?(?P<where_param>(?:#\d+)*)?\*(?P<dimension>\d+)(?P<dimension_param>(?:#\d+)*)?(?P<dimension_value>(?:\*\d*)+)##$"  # pylint: disable=line-too-long
 )  #  *#WHO*WHERE*DIMENSION*VAL1*VALn##
 
 # Energy message types

@@ -33,7 +33,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = status_match
             self._family = "EVENT"
-            self._type = "STATUS"
+            self._message_type = "STATUS"
             self._who = int(self._match.group("who"))
             self._what = int(self._match.group("what"))
             if self._what == 1000:
@@ -51,7 +51,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = status_request_match
             self._family = "REQUEST"
-            self._type = "STATUS_REQUEST"
+            self._message_type = "STATUS_REQUEST"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -66,7 +66,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = dimension_request_match
             self._family = "REQUEST"
-            self._type = "DIMENSION_REQUEST"
+            self._message_type = "DIMENSION_REQUEST"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -81,7 +81,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = dimension_reply_match
             self._family = "EVENT"
-            self._type = "DIMENSION_REQUEST_REPLY"
+            self._message_type = "DIMENSION_REQUEST_REPLY"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -98,7 +98,7 @@ class OWNMessage:
             self._is_valid_message = True
             self._match = dimension_writing_match
             self._family = "COMMAND"
-            self._type = "DIMENSION_WRITING"
+            self._message_type = "DIMENSION_WRITING"
             self._who = int(self._match.group("who"))
             self._what = None
             self._what_param = None
@@ -142,6 +142,17 @@ class OWNMessage:
         return self._where  # [1:] if self._where.startswith('#') else self._where
 
     @property
+    def interface(self) -> str:
+        """The 'where' parameter corresponding to the bus interface of the subject of this message"""
+        return (
+            self._where_param[1]
+            if self._who in [1, 2, 15]
+            and len(self._where_param) > 0
+            and self._where_param[0] == "4"
+            else None
+        )
+
+    @property
     def dimension(self) -> Optional[int]:
         """The 'where' ID of the subject of this message"""
         return self._dimension
@@ -154,7 +165,40 @@ class OWNMessage:
     @property
     def unique_id(self) -> str:
         """The ID of the subject of this message"""
-        return f"{self.who}-{self.where}"
+        return (
+            f"{self.who}-{self.where}#4#{self.interface}"
+            if self.interface is not None
+            else f"{self.who}-{self.where}"
+        )
+
+    @property
+    def event_content(self) -> dict:
+        _event = {
+            "message": self._raw,
+            "family": self._family.replace("_", " ").capitalize(),
+            "type": self._message_type.replace("_", " ").capitalize(),
+            "who": self._who,
+        }
+        if self._where:
+            _event.update({"where": self._where})
+        if self.interface:
+            _event.update({"interface": self.interface})
+            if self._where_param and len(self._where_param) > 2:
+                _event.update({"where parameters": self._where_param[2:]})
+        elif self._where_param:
+            _event.update({"where parameters": self._where_param})
+        if self._what:
+            _event.update({"what": self._what})
+        if self._what_param:
+            _event.update({"what parameters": self._what_param})
+        if self._dimension:
+            _event.update({"dimension": self._dimension})
+        if self._dimension_param:
+            _event.update({"dimension parameters": self._dimension_param})
+        if self._dimension_value:
+            _event.update({"dimension values": self._dimension_value})
+
+        return _event
 
     @property
     def human_readable_log(self) -> str:
@@ -164,6 +208,10 @@ class OWNMessage:
     @human_readable_log.setter
     def human_readable_log(self, human_readable_log: str) -> None:
         self._human_readable_log = human_readable_log
+
+    @property
+    def _interface_log_text(self) -> str:
+        return f" on interface {self.interface}" if self.interface is not None else ""
 
     @property
     def is_general(self) -> bool:

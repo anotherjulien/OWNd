@@ -34,36 +34,40 @@ class OWNAutomationEvent(OWNEvent):
                 self._info = int(self._dimension_value[3])
 
         if self._state == 0:
-            self._human_readable_log = f"Cover {self._where} stopped."
+            self._human_readable_log = (
+                f"Cover {self._where}{self._interface_log_text} stopped."
+            )
             self._is_opening = False
             self._is_closing = False
         elif self._state == 10:
             self._is_opening = False
             self._is_closing = False
             if self._position == 0:
-                self._human_readable_log = f"Cover {self._where} is closed."
+                self._human_readable_log = (
+                    f"Cover {self._where}{self._interface_log_text} is closed."
+                )
                 self._is_closed = True
             else:
-                self._human_readable_log = (
-                    f"Cover {self._where} is opened at {self._position}%."
-                )
+                self._human_readable_log = f"Cover {self._where}{self._interface_log_text} is opened at {self._position}%."
                 self._is_closed = False
         else:
             if self._state == 1:
-                self._human_readable_log = f"Cover {self._where} is opening."
+                self._human_readable_log = (
+                    f"Cover {self._where}{self._interface_log_text} is opening."
+                )
                 self._is_opening = True
                 self._is_closing = False
             elif self._state == 11 or self._state == 13:
-                self._human_readable_log = f"Cover {self._where} is opening from initial position {self._position}."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Cover {self._where}{self._interface_log_text} is opening from initial position {self._position}."  # pylint: disable=line-too-long
                 self._is_opening = True
                 self._is_closing = False
                 self._is_closed = False
             elif self._state == 2:
-                self._human_readable_log = f"Cover {self._where} is closing."
+                self._human_readable_log = f"Cover {self._where}{self._interface_log_text} is closing."
                 self._is_closing = True
                 self._is_opening = False
             elif self._state == 12 or self._state == 14:
-                self._human_readable_log = f"Cover {self._where} is closing from initial position {self._position}."  # pylint: disable=line-too-long
+                self._human_readable_log = f"Cover {self._where}{self._interface_log_text} is closing from initial position {self._position}."  # pylint: disable=line-too-long
                 self._is_closing = True
                 self._is_opening = False
                 self._is_closed = False
@@ -95,29 +99,29 @@ class OWNAutomationCommand(OWNCommand):
     @classmethod
     def status(cls, where: str):
         message = cls(f"*#2*{where}##")
-        message._human_readable_log = f"Requesting shutter {where} status."
+        message._human_readable_log = f"Requesting shutter {message._where}{message._interface_log_text} status."
         return message
 
     @classmethod
     def raise_shutter(cls, where: str):
         message = cls(f"*2*1*{where}##")
-        message._human_readable_log = f"Raising shutter {where}."
+        message._human_readable_log = f"Raising shutter {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
     def lower_shutter(cls, where: str):
         message = cls(f"*2*2*{where}##")
-        message._human_readable_log = f"Lowering shutter {where}."
+        message._human_readable_log = f"Lowering shutter {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
     def stop_shutter(cls, where: str):
         message = cls(f"*2*0*{where}##")
-        message._human_readable_log = f"Stoping shutter {where}."
+        message._human_readable_log = f"Stoping shutter {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
     def set_shutter_level(cls, where: str, level: int = 30):
         message = cls(f"*#2*{where}*#11#001*{level}##")
-        message._human_readable_log = f"Setting shutter {where} position to {level}%."
+        message._human_readable_log = f"Setting shutter {message._where}{message._interface_log_text} position to {level}%."
         return message

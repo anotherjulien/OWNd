@@ -18,6 +18,8 @@ class OWNSceneEvent(OWNEvent):
             _status = "enabled"
         elif self._state == 4:
             _status = "disabled"
+        else:
+            _status = f"unknonwn ({self._state})"
 
         self._human_readable_log = f"Scene {self._scene} is {_status}."
 

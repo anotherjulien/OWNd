@@ -179,12 +179,15 @@ class OWNHeatingEvent(OWNEvent):
                 or self._dimension_value[0] == "00"
                 or self._dimension_value[0] == "4"
                 or self._dimension_value[0] == "5"
+                or self._dimension_value[0] == "6"
+                or self._dimension_value[0] == "7"
+                or self._dimension_value[0] == "8"
             ):
                 self._local_offset = 0
             elif self._dimension_value[0].startswith("0"):
-                self._local_offset = int(f"+{self._dimension_value[0][1:]}")
+                self._local_offset = int(f"{self._dimension_value[0][1:]}")
             else:
-                self._local_offset = int(f"-{self._dimension_value[0][1:]}")
+                self._local_offset = -int(f"{self._dimension_value[0][1:]}")
             self._human_readable_log = (
                 f"Zone {self._zone}'s local offset is set to {self._local_offset}°C."
             )
@@ -373,13 +376,13 @@ class OWNHeatingCommand(OWNCommand):
     @classmethod
     def status(cls, where: str):
         message = cls(f"*#4*{where}##")
-        message._human_readable_log = f"Requesting climate status update for {where}."
+        message._human_readable_log = f"Requesting climate status update for {message._where}{message._interface_log_text}."
         return message
 
     @classmethod
     def get_temperature(cls, where: str):
         message = cls(f"*#4*{where}*0##")
-        message._human_readable_log = f"Requesting climate status update for {where}."
+        message._human_readable_log = f"Requesting climate status update for {whmessage._where}{message._interface_log_textere}."
         return message
 
     @classmethod

@@ -22,11 +22,8 @@ class OWNAlarmEvent(OWNEvent):
                 self._zone = "c"
             elif self._zone == "15":
                 self._zone = "f"
-            else:
-                self._sensor = int(self._zone[1:])
-                self._zone = int(self._zone[0])
             self._human_readable_log = f"Zone {self._zone} is reporting: "
-        else:
+        elif len(self._where) > 1:
             self._zone = int(self._where[0])
             self._sensor = int(self._where[1:])
             if self._zone == 0:
@@ -37,6 +34,9 @@ class OWNAlarmEvent(OWNEvent):
                 self._human_readable_log = (
                     f"Sensor {self._sensor} in zone {self._zone} is reporting: "
                 )
+        else:
+            self._system = True
+            self._human_readable_log = "Control panel is reporting: "
 
         if self._state_code == 0:
             self._state = "maintenance"
